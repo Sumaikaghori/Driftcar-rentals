@@ -46,7 +46,7 @@ a{text-decoration:none;}
 
 /* ── HERO ── */
 .hero{background:radial-gradient(120% 100% at 80% 0%,#22272e 0%,var(--asphalt) 55%);min-height:88vh;display:flex;align-items:center;position:relative;overflow:hidden;}
-.hero::after{content:'';position:absolute;right:-8%;bottom:-12%;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,201,60,.12) 0%,transparent 70%);}
+.hero::after{content:'';position:absolute;right:-8%;bottom:-12%;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,201,60,.12) 0%,transparent 70%);pointer-events:none;z-index:0;}
 .hero-eyebrow{font-family:var(--font-mono);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--signal);font-weight:700;margin-bottom:1.1rem;display:flex;align-items:center;gap:.5rem;}
 .hero-eyebrow .pulse{width:7px;height:7px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 0 rgba(255,201,60,.6);animation:pulse 1.8s infinite;}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,201,60,.55)}70%{box-shadow:0 0 0 10px rgba(255,201,60,0)}100%{box-shadow:0 0 0 0 rgba(255,201,60,0)}}
@@ -58,7 +58,7 @@ a{text-decoration:none;}
 .hero-stat .lbl{font-size:.72rem;color:rgba(255,255,255,.5);letter-spacing:.06em;text-transform:uppercase;margin-top:.15rem;}
 
 /* ── SEARCH PANEL ── */
-.search-panel{background:var(--paper);border-radius:10px;padding:1.6rem;box-shadow:0 24px 60px rgba(0,0,0,.45);border:1px solid #ECEEF1;}
+.search-panel{background:var(--paper);border-radius:10px;padding:1.6rem;box-shadow:0 24px 60px rgba(0,0,0,.45);border:1px solid #ECEEF1;position:relative;z-index:1;}
 .search-panel .form-label{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--steel);margin-bottom:.35rem;}
 .search-panel .form-control,.search-panel .form-select{border:1.5px solid #E2E5E9;border-radius:6px;font-size:.9rem;padding:.6rem .8rem;}
 .search-panel .form-control:focus,.search-panel .form-select:focus{border-color:var(--signal);box-shadow:0 0 0 3px rgba(255,201,60,.22);}
@@ -233,7 +233,7 @@ a{text-decoration:none;}
             <div class="row g-3">
               <div class="col-12">
                 <label class="form-label">Pickup Location</label>
-                <select class="form-select" id="hero-location"><option>Downtown Hub — Main St</option><option>Airport Terminal 2</option><option>Westside Station</option><option>Harbor Point</option></select>
+                <select class="form-select" id="hero-location"><option>Karachi — Shahrah-e-Faisal</option><option>Lahore — DHA Phase 5</option><option>Islamabad — Blue Area</option><option>Jinnah Int'l Airport, Karachi</option><option>Allama Iqbal Int'l Airport, Lahore</option></select>
               </div>
               <div class="col-6">
                 <label class="form-label">Pickup Date</label>
@@ -560,11 +560,11 @@ a{text-decoration:none;}
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label-drift">Pickup Location</label>
-              <select class="form-control-drift" id="bk-pickup-loc"><option>Downtown Hub — Main St</option><option>Airport Terminal 2</option><option>Westside Station</option><option>Harbor Point</option></select>
+              <select class="form-control-drift" id="bk-pickup-loc"><option>Karachi — Shahrah-e-Faisal</option><option>Lahore — DHA Phase 5</option><option>Islamabad — Blue Area</option><option>Jinnah Int'l Airport, Karachi</option><option>Allama Iqbal Int'l Airport, Lahore</option></select>
             </div>
             <div class="col-md-6">
               <label class="form-label-drift">Return Location</label>
-              <select class="form-control-drift" id="bk-return-loc"><option>Downtown Hub — Main St</option><option>Airport Terminal 2</option><option>Westside Station</option><option>Harbor Point</option></select>
+              <select class="form-control-drift" id="bk-return-loc"><option>Karachi — Shahrah-e-Faisal</option><option>Lahore — DHA Phase 5</option><option>Islamabad — Blue Area</option><option>Jinnah Int'l Airport, Karachi</option><option>Allama Iqbal Int'l Airport, Lahore</option></select>
             </div>
             <div class="col-md-6">
               <label class="form-label-drift">Pickup Date</label>
@@ -709,14 +709,14 @@ a{text-decoration:none;}
         <div class="form-card">
           <h5 class="fw-bold mb-3" style="font-family:var(--font-display)">Personal information</h5>
           <div class="row g-3">
-            <div class="col-md-6"><label class="form-label-drift">First Name</label><input type="text" class="form-control-drift" value="Jordan"></div>
-            <div class="col-md-6"><label class="form-label-drift">Last Name</label><input type="text" class="form-control-drift" value="Diaz"></div>
-            <div class="col-md-6"><label class="form-label-drift">Email</label><input type="email" class="form-control-drift" value="jordan.diaz@email.com"></div>
-            <div class="col-md-6"><label class="form-label-drift">Phone</label><input type="tel" class="form-control-drift" value="(555) 213-8890"></div>
-            <div class="col-md-6"><label class="form-label-drift">Driver's License No.</label><input type="text" class="form-control-drift" value="D-2284910"></div>
-            <div class="col-md-6"><label class="form-label-drift">Date of Birth</label><input type="date" class="form-control-drift" value="1996-04-12"></div>
+            <div class="col-md-6"><label class="form-label-drift">First Name</label><input type="text" class="form-control-drift" id="pf-fname"></div>
+            <div class="col-md-6"><label class="form-label-drift">Last Name</label><input type="text" class="form-control-drift" id="pf-lname"></div>
+            <div class="col-md-6"><label class="form-label-drift">Email</label><input type="email" class="form-control-drift" id="pf-email" disabled></div>
+            <div class="col-md-6"><label class="form-label-drift">Phone</label><input type="tel" class="form-control-drift" id="pf-phone"></div>
+            <div class="col-md-6"><label class="form-label-drift">Driver's License No.</label><input type="text" class="form-control-drift" id="pf-license"></div>
+            <div class="col-md-6"><label class="form-label-drift">Date of Birth</label><input type="date" class="form-control-drift" id="pf-dob"></div>
           </div>
-          <button class="btn-signal mt-4" onclick="showToast('Profile updated successfully.')">Save Changes</button>
+          <button class="btn-signal mt-4" onclick="saveProfile()" id="save-profile-btn">Save Changes</button>
         </div>
       </div>
     </div>
@@ -1382,7 +1382,7 @@ function renderAdminUsersTable(all){
 }
 
 // ══ PROFILE ══
-function renderProfile(){
+async function renderProfile(){
   if(!currentUser) return;
   const el = document.getElementById('profile-name');
   const eml = document.getElementById('profile-email');
@@ -1390,6 +1390,47 @@ function renderProfile(){
   if(el) el.textContent = currentUser.name;
   if(eml) eml.textContent = currentUser.email;
   if(av) av.textContent = currentUser.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+
+  try{
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    const d = doc.exists ? doc.data() : {};
+    document.getElementById('pf-fname').value = d.fname || '';
+    document.getElementById('pf-lname').value = d.lname || '';
+    document.getElementById('pf-email').value = currentUser.email;
+    document.getElementById('pf-phone').value = d.phone || '';
+    document.getElementById('pf-license').value = d.license || '';
+    document.getElementById('pf-dob').value = d.dob || '';
+  }catch(err){
+    console.error('Could not load profile:', err);
+  }
+}
+async function saveProfile(){
+  if(!currentUser) return;
+  const btn = document.getElementById('save-profile-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    await db.collection('users').doc(currentUser.uid).set({
+      fname: document.getElementById('pf-fname').value.trim(),
+      lname: document.getElementById('pf-lname').value.trim(),
+      phone: document.getElementById('pf-phone').value.trim(),
+      license: document.getElementById('pf-license').value.trim(),
+      dob: document.getElementById('pf-dob').value
+    }, {merge:true});
+    showToast('Profile updated successfully.');
+    // refresh the header name/avatar too
+    const fname = document.getElementById('pf-fname').value.trim();
+    const lname = document.getElementById('pf-lname').value.trim();
+    if(fname && lname){
+      currentUser.name = fname+' '+lname;
+      document.getElementById('profile-name').textContent = currentUser.name;
+      document.getElementById('profile-avatar-el').textContent = (fname[0]+lname[0]).toUpperCase();
+      document.getElementById('nav-avatar').textContent = (fname[0]+lname[0]).toUpperCase();
+    }
+  }catch(err){
+    showToast('Could not save profile: ' + (err.message||'please try again.'));
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
 }
 
 // ══ CONTACT FORM ══
