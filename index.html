@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DRIFT — Car Rental Booking</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+<!-- 🔥 Firebase (Auth + Firestore) — compat SDK, no build tools needed -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --asphalt:#15181C; --asphalt-mid:#1F2329; --asphalt-soft:#2A2F36;
+  --signal:#FFC93C; --signal-deep:#E8AC1B;
+  --cloud:#F6F7F9; --paper:#FFFFFF; --steel:#5A6472; --steel-dark:#2D333B;
+  --green:#1F8A56; --green-bg:#DEF7E8; --amber-bg:#FFF1CF; --amber:#92650B; --red:#B3261E; --red-bg:#FCE4E2;
+  --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-body);background:var(--cloud);color:var(--asphalt);overflow-x:hidden;}
+.page{display:none;animation:fadeIn .35s ease;min-height:70vh;}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+a{text-decoration:none;}
+.mono{font-family:var(--font-mono);}
+
+/* ── ROUTE DIVIDER (signature element) ── */
+.route-divider{display:flex;align-items:center;gap:.6rem;margin:0 0 1.2rem;}
+.route-divider .dot{width:7px;height:7px;border-radius:50%;background:var(--signal);flex:none;}
+.route-divider .dash-line{flex:1;height:0;border-top:2px dashed #d7dbe0;max-width:70px;}
+.route-divider .pin{color:var(--steel);font-size:.9rem;}
+
+/* ── NAVBAR ── */
+.navbar-drift{background:var(--asphalt);padding:.8rem 0;position:sticky;top:0;z-index:1000;box-shadow:0 2px 20px rgba(0,0,0,.25);}
+.brand-drift{font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--paper) !important;letter-spacing:-.02em;display:flex;align-items:center;gap:.4rem;}
+.brand-drift .dot{color:var(--signal);}
+.nav-link-drift{color:rgba(255,255,255,.72) !important;font-size:.82rem;font-weight:600;letter-spacing:.04em;padding:.5rem .9rem !important;cursor:pointer;background:none;border:none;border-radius:4px;transition:all .15s;}
+.nav-link-drift:hover{color:var(--paper) !important;background:rgba(255,255,255,.06);}
+.nav-link-drift.active{color:var(--asphalt) !important;background:var(--signal);}
+.nav-cta-drift{background:var(--signal);color:var(--asphalt) !important;border-radius:4px;padding:.5rem 1.1rem !important;font-weight:700;}
+.nav-cta-drift:hover{background:var(--signal-deep);color:var(--asphalt) !important;}
+.nav-avatar{width:34px;height:34px;border-radius:50%;background:var(--signal);color:var(--asphalt);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;cursor:pointer;}
+
+/* ── HERO ── */
+.hero{background:radial-gradient(120% 100% at 80% 0%,#22272e 0%,var(--asphalt) 55%);min-height:88vh;display:flex;align-items:center;position:relative;overflow:hidden;}
+.hero::after{content:'';position:absolute;right:-8%;bottom:-12%;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(255,201,60,.12) 0%,transparent 70%);}
+.hero-eyebrow{font-family:var(--font-mono);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--signal);font-weight:700;margin-bottom:1.1rem;display:flex;align-items:center;gap:.5rem;}
+.hero-eyebrow .pulse{width:7px;height:7px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 0 rgba(255,201,60,.6);animation:pulse 1.8s infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,201,60,.55)}70%{box-shadow:0 0 0 10px rgba(255,201,60,0)}100%{box-shadow:0 0 0 0 rgba(255,201,60,0)}}
+.hero-title{font-family:var(--font-display);font-size:clamp(2.6rem,5.4vw,4.4rem);font-weight:700;color:var(--paper);line-height:1.06;letter-spacing:-.02em;margin-bottom:1.3rem;}
+.hero-title .accent{color:var(--signal);}
+.hero-sub{color:rgba(255,255,255,.62);font-size:1.05rem;max-width:460px;line-height:1.7;margin-bottom:2.2rem;}
+.hero-stats{display:flex;gap:2.2rem;margin-top:2.4rem;}
+.hero-stat .num{font-family:var(--font-mono);font-size:1.7rem;font-weight:700;color:var(--paper);}
+.hero-stat .lbl{font-size:.72rem;color:rgba(255,255,255,.5);letter-spacing:.06em;text-transform:uppercase;margin-top:.15rem;}
+
+/* ── SEARCH PANEL ── */
+.search-panel{background:var(--paper);border-radius:10px;padding:1.6rem;box-shadow:0 24px 60px rgba(0,0,0,.45);border:1px solid #ECEEF1;}
+.search-panel .form-label{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--steel);margin-bottom:.35rem;}
+.search-panel .form-control,.search-panel .form-select{border:1.5px solid #E2E5E9;border-radius:6px;font-size:.9rem;padding:.6rem .8rem;}
+.search-panel .form-control:focus,.search-panel .form-select:focus{border-color:var(--signal);box-shadow:0 0 0 3px rgba(255,201,60,.22);}
+.btn-signal{background:var(--signal);color:var(--asphalt);border:none;font-weight:700;border-radius:6px;padding:.65rem 1.4rem;font-size:.85rem;letter-spacing:.02em;transition:all .15s;}
+.btn-signal:hover{background:var(--signal-deep);transform:translateY(-1px);}
+.btn-dark-o{background:var(--asphalt);color:var(--paper);border:none;font-weight:600;border-radius:6px;padding:.65rem 1.4rem;font-size:.85rem;transition:all .15s;}
+.btn-dark-o:hover{background:var(--steel-dark);}
+.btn-outline-drift{background:transparent;border:1.5px solid var(--asphalt);color:var(--asphalt);font-weight:600;border-radius:6px;padding:.6rem 1.3rem;font-size:.85rem;transition:all .15s;}
+.btn-outline-drift:hover{background:var(--asphalt);color:var(--paper);}
+.btn-ghost-light{background:transparent;border:1.5px solid rgba(255,255,255,.3);color:var(--paper);font-weight:600;border-radius:6px;padding:.6rem 1.3rem;font-size:.85rem;}
+.btn-ghost-light:hover{border-color:var(--signal);color:var(--signal);}
+
+/* ── SECTION ── */
+.section{padding:5.5rem 0;}
+.section-tight{padding:3rem 0;}
+.section-eyebrow{font-family:var(--font-mono);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--signal-deep);margin-bottom:.5rem;}
+.section-title{font-family:var(--font-display);font-size:clamp(1.8rem,3.4vw,2.5rem);font-weight:700;color:var(--asphalt);letter-spacing:-.01em;}
+.section-sub{color:var(--steel);font-size:.98rem;max-width:520px;}
+.bg-asphalt{background:var(--asphalt);}
+.bg-soft{background:#EFF1F4;}
+
+/* ── CAR CARD ── */
+.car-card{border:1px solid #E7E9EC;border-radius:10px;overflow:hidden;background:var(--paper);transition:transform .25s,box-shadow .25s;cursor:pointer;height:100%;}
+.car-card:hover{transform:translateY(-5px);box-shadow:0 18px 40px rgba(20,24,28,.12);}
+.car-card-media{height:180px;display:flex;align-items:center;justify-content:center;font-size:3.6rem;position:relative;}
+.car-card-media .plate{position:absolute;bottom:.7rem;right:.7rem;background:var(--signal);color:var(--asphalt);font-family:var(--font-mono);font-size:.68rem;font-weight:700;padding:.2rem .5rem;border-radius:4px;letter-spacing:.04em;}
+.car-card-body{padding:1.1rem 1.2rem 1.3rem;}
+.car-type-tag{font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--steel);}
+.car-name{font-family:var(--font-display);font-weight:700;font-size:1.15rem;margin:.2rem 0 .5rem;}
+.car-specs{display:flex;gap:.9rem;font-size:.78rem;color:var(--steel);margin-bottom:.8rem;flex-wrap:wrap;}
+.car-specs span{display:flex;align-items:center;gap:.3rem;}
+.car-price{font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--asphalt);}
+.car-price .per{font-size:.7rem;color:var(--steel);font-weight:500;font-family:var(--font-body);}
+.avail-badge{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.25rem .6rem;border-radius:20px;}
+.badge-avail{background:var(--green-bg);color:var(--green);}
+.badge-limited{background:var(--amber-bg);color:var(--amber);}
+.badge-unavail{background:var(--red-bg);color:var(--red);}
+
+/* ── FILTER SIDEBAR ── */
+.filter-card{background:var(--paper);border:1px solid #E7E9EC;border-radius:10px;padding:1.4rem;}
+.filter-card h6{font-family:var(--font-display);font-weight:700;font-size:.95rem;margin-bottom:1rem;}
+.filter-group{margin-bottom:1.4rem;}
+.filter-group .form-label{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--steel);margin-bottom:.5rem;}
+.filter-chip{display:inline-block;border:1.5px solid #E2E5E9;border-radius:20px;padding:.35rem .9rem;font-size:.8rem;font-weight:600;margin:.2rem .3rem .2rem 0;cursor:pointer;transition:all .15s;background:var(--paper);color:var(--asphalt);}
+.filter-chip.active{background:var(--asphalt);color:var(--paper);border-color:var(--asphalt);}
+.filter-chip:hover{border-color:var(--asphalt);}
+
+/* ── STAT STRIP (odometer) ── */
+.odometer-strip{background:var(--asphalt);}
+.odo-item{text-align:center;padding:2rem 1rem;}
+.odo-num{font-family:var(--font-mono);font-size:2.1rem;font-weight:700;color:var(--signal);}
+.odo-lbl{font-size:.75rem;color:rgba(255,255,255,.55);letter-spacing:.08em;text-transform:uppercase;margin-top:.3rem;}
+
+/* ── STEPS ── */
+.step-card{padding:1.6rem;}
+.step-num{font-family:var(--font-mono);font-size:.85rem;font-weight:700;color:var(--signal-deep);border:1.5px solid var(--signal);width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:1rem;}
+.step-title{font-family:var(--font-display);font-weight:700;font-size:1.05rem;margin-bottom:.4rem;}
+.step-desc{font-size:.88rem;color:var(--steel);line-height:1.6;}
+
+/* ── FORMS ── */
+.form-card{background:var(--paper);border:1px solid #E7E9EC;border-radius:12px;padding:2.2rem;}
+.form-label-drift{font-size:.74rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--steel);margin-bottom:.4rem;}
+.form-control-drift,select.form-control-drift{border:1.5px solid #E2E5E9;border-radius:6px;padding:.65rem .9rem;font-size:.92rem;width:100%;}
+.form-control-drift:focus{outline:none;border-color:var(--signal);box-shadow:0 0 0 3px rgba(255,201,60,.22);}
+.is-invalid-drift{border-color:var(--red) !important;}
+.is-valid-drift{border-color:var(--green) !important;}
+.err-msg{display:none;color:var(--red);font-size:.78rem;margin-top:.35rem;}
+.err-msg.show{display:block;}
+.auth-tab{flex:1;text-align:center;padding:.8rem;font-weight:700;font-size:.88rem;color:var(--steel);cursor:pointer;border-bottom:2.5px solid #E7E9EC;}
+.auth-tab.active{color:var(--asphalt);border-bottom-color:var(--signal);}
+
+/* ── BOOKING SUMMARY ── */
+.summary-card{background:var(--asphalt);color:var(--paper);border-radius:12px;padding:1.8rem;position:sticky;top:90px;}
+.summary-row{display:flex;justify-content:space-between;padding:.55rem 0;font-size:.88rem;color:rgba(255,255,255,.7);border-bottom:1px solid rgba(255,255,255,.08);}
+.summary-row.total{color:var(--paper);font-weight:700;font-size:1.05rem;border-bottom:none;padding-top:1rem;}
+.summary-row.total .amt{color:var(--signal);font-family:var(--font-mono);}
+
+/* ── TABLES ── */
+.drift-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--paper);border-radius:10px;overflow:hidden;border:1px solid #E7E9EC;}
+.drift-table th{background:#F4F5F7;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--steel);font-weight:700;padding:.85rem 1rem;text-align:left;}
+.drift-table td{padding:.9rem 1rem;font-size:.88rem;border-top:1px solid #EEF0F2;vertical-align:middle;}
+.status-pill{font-size:.7rem;font-weight:700;padding:.25rem .65rem;border-radius:20px;letter-spacing:.03em;}
+.status-confirmed{background:var(--green-bg);color:var(--green);}
+.status-completed{background:#E4E7EB;color:var(--steel-dark);}
+.status-cancelled{background:var(--red-bg);color:var(--red);}
+
+/* ── ADMIN ── */
+.admin-shell{display:flex;min-height:calc(100vh - 70px);}
+.admin-side{width:230px;background:var(--asphalt);flex:none;padding:1.6rem 0;}
+.admin-side a{display:flex;align-items:center;gap:.6rem;color:rgba(255,255,255,.62);font-size:.85rem;font-weight:600;padding:.7rem 1.4rem;cursor:pointer;border-left:3px solid transparent;}
+.admin-side a:hover{color:var(--paper);background:rgba(255,255,255,.04);}
+.admin-side a.active{color:var(--paper);background:rgba(255,201,60,.08);border-left-color:var(--signal);}
+.admin-main{flex:1;padding:2.2rem 2.4rem;background:var(--cloud);}
+.kpi-card{background:var(--paper);border:1px solid #E7E9EC;border-radius:10px;padding:1.3rem 1.4rem;}
+.kpi-num{font-family:var(--font-mono);font-size:1.7rem;font-weight:700;}
+.kpi-lbl{font-size:.78rem;color:var(--steel);margin-top:.2rem;}
+.kpi-delta{font-size:.74rem;font-weight:700;margin-top:.4rem;}
+.kpi-up{color:var(--green);}
+
+/* ── FOOTER ── */
+.footer-drift{background:var(--asphalt);color:rgba(255,255,255,.55);padding:3.5rem 0 1.5rem;}
+.footer-drift h6{color:var(--paper);font-family:var(--font-display);font-weight:700;margin-bottom:1rem;font-size:.95rem;}
+.footer-drift a{color:rgba(255,255,255,.55);font-size:.86rem;display:block;margin-bottom:.55rem;}
+.footer-drift a:hover{color:var(--signal);}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.1);margin-top:2.5rem;padding-top:1.3rem;font-size:.78rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:.6rem;}
+
+/* ── MISC ── */
+.toast-drift{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--asphalt);color:var(--paper);padding:.9rem 1.3rem;border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.3);z-index:2000;display:none;font-size:.88rem;font-weight:600;border-left:4px solid var(--signal);}
+.profile-side{background:var(--paper);border:1px solid #E7E9EC;border-radius:10px;padding:1.6rem;text-align:center;}
+.profile-avatar{width:84px;height:84px;border-radius:50%;background:var(--signal);color:var(--asphalt);font-family:var(--font-display);font-weight:700;font-size:2rem;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;}
+.profile-nav a{display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;border-radius:6px;font-size:.86rem;font-weight:600;color:var(--asphalt);cursor:pointer;}
+.profile-nav a.active,.profile-nav a:hover{background:#F4F5F7;}
+.page-banner{background:var(--asphalt);padding:2.6rem 0;}
+.page-banner h1{font-family:var(--font-display);color:var(--paper);font-weight:700;font-size:2.1rem;}
+.breadcrumb-drift{color:rgba(255,255,255,.5);font-size:.82rem;}
+.breadcrumb-drift a{color:rgba(255,255,255,.5);}
+.breadcrumb-drift .sep{margin:0 .4rem;}
+@media(max-width:991px){.admin-shell{flex-direction:column;}.admin-side{width:100%;display:flex;overflow-x:auto;padding:.6rem;}.admin-side a{border-left:none;border-bottom:3px solid transparent;white-space:nowrap;}.admin-side a.active{border-left:none;border-bottom-color:var(--signal);}.summary-card{position:static;margin-top:2rem;}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ NAVBAR ══════════════ -->
+<nav class="navbar-drift">
+  <div class="container d-flex align-items-center justify-content-between">
+    <a class="brand-drift" onclick="showPage('home')"><span class="dot">●</span>DRIFT</a>
+    <div class="d-none d-lg-flex align-items-center gap-1">
+      <button class="nav-link-drift" data-nav="home" onclick="showPage('home')">Home</button>
+      <button class="nav-link-drift" data-nav="cars" onclick="showPage('cars')">Browse Cars</button>
+      <button class="nav-link-drift" data-nav="history" onclick="requireAuth('history')">My Bookings</button>
+      <button class="nav-link-drift" data-nav="contact" onclick="showPage('contact')">Contact</button>
+      <button class="nav-link-drift" data-nav="admin-dashboard" onclick="requireAdmin()"><i class="bi bi-speedometer2 me-1"></i>Admin</button>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="nav-link-drift d-none d-md-inline" onclick="showPage('auth')">Sign In</button>
+      <button class="nav-cta-drift" onclick="showPage('auth')">Get Started</button>
+      <div class="nav-avatar d-none" id="nav-avatar" onclick="showPage('profile')">JD</div>
+      <button class="btn d-lg-none text-white border-0" onclick="toggleMobileNav()"><i class="bi bi-list fs-3"></i></button>
+    </div>
+  </div>
+  <div id="mobile-nav" class="d-lg-none d-none container pt-3 pb-2 d-flex flex-column gap-1">
+    <button class="nav-link-drift text-start" onclick="showPage('home')">Home</button>
+    <button class="nav-link-drift text-start" onclick="showPage('cars')">Browse Cars</button>
+    <button class="nav-link-drift text-start" onclick="requireAuth('history')">My Bookings</button>
+    <button class="nav-link-drift text-start" onclick="showPage('contact')">Contact</button>
+    <button class="nav-link-drift text-start" onclick="requireAdmin()">Admin</button>
+  </div>
+</nav>
+
+<!-- ══════════════ HOME ══════════════ -->
+<div class="page active" id="page-home">
+  <section class="hero">
+    <div class="container py-5">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6">
+          <div class="hero-eyebrow"><span class="pulse"></span>120+ Cars Ready Across 18 Cities</div>
+          <h1 class="hero-title">Find your car.<br>Hit the <span class="accent">road</span> today.</h1>
+          <p class="hero-sub">Compare real-time availability, transparent pricing and verified vehicles — then book in under two minutes. No counters, no waiting.</p>
+          <div class="d-flex gap-3 flex-wrap">
+            <button class="btn-signal" onclick="showPage('cars')">Browse Fleet <i class="bi bi-arrow-right ms-1"></i></button>
+            <button class="btn-ghost-light" onclick="showPage('auth')">Create Account</button>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat"><div class="num">4.8/5</div><div class="lbl">Avg. Rating</div></div>
+            <div class="hero-stat"><div class="num">32k+</div><div class="lbl">Trips Completed</div></div>
+            <div class="hero-stat"><div class="num">18</div><div class="lbl">Cities</div></div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="search-panel">
+            <div class="route-divider"><span class="dot"></span><span class="dash-line"></span><i class="bi bi-geo-alt pin"></i><span class="dash-line"></span><span class="dot"></span></div>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Pickup Location</label>
+                <select class="form-select" id="hero-location"><option>Downtown Hub — Main St</option><option>Airport Terminal 2</option><option>Westside Station</option><option>Harbor Point</option></select>
+              </div>
+              <div class="col-6">
+                <label class="form-label">Pickup Date</label>
+                <input type="date" class="form-control" id="hero-pickup">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Return Date</label>
+                <input type="date" class="form-control" id="hero-return">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Car Type</label>
+                <select class="form-select" id="hero-type"><option value="">Any Type</option><option>Economy</option><option>SUV</option><option>Sedan</option><option>Luxury</option><option>Electric</option></select>
+              </div>
+              <div class="col-12 mt-2">
+                <button class="btn-search btn-signal w-100" onclick="heroSearch()">Search Available Cars</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="odometer-strip">
+    <div class="container">
+      <div class="row text-center g-0">
+        <div class="col-6 col-md-3 odo-item"><div class="odo-num">120+</div><div class="odo-lbl">Vehicles</div></div>
+        <div class="col-6 col-md-3 odo-item"><div class="odo-num">18</div><div class="odo-lbl">Pickup Cities</div></div>
+        <div class="col-6 col-md-3 odo-item"><div class="odo-num">07min</div><div class="odo-lbl">Avg. Checkout</div></div>
+        <div class="col-6 col-md-3 odo-item"><div class="odo-num">24/7</div><div class="odo-lbl">Roadside Support</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="route-divider"><span class="dot"></span><span class="dash-line"></span></div>
+      <div class="d-flex justify-content-between align-items-end flex-wrap mb-4 gap-3">
+        <div>
+          <div class="section-eyebrow">Popular Right Now</div>
+          <h2 class="section-title">Featured vehicles</h2>
+        </div>
+        <button class="btn-outline-drift" onclick="showPage('cars')">View Full Fleet</button>
+      </div>
+      <div class="row g-4" id="featured-cars"></div>
+    </div>
+  </section>
+
+  <section class="section bg-soft">
+    <div class="container">
+      <div class="route-divider"><span class="dot"></span><span class="dash-line"></span></div>
+      <div class="section-eyebrow">How It Works</div>
+      <h2 class="section-title mb-4">Three steps to keys-in-hand</h2>
+      <div class="row g-4">
+        <div class="col-md-4 step-card">
+          <div class="step-num">01</div>
+          <div class="step-title">Search & compare</div>
+          <div class="step-desc">Filter by brand, type, price and availability to find the right car for your trip in seconds.</div>
+        </div>
+        <div class="col-md-4 step-card">
+          <div class="step-num">02</div>
+          <div class="step-title">Book & confirm</div>
+          <div class="step-desc">Pick your dates, add driver details, and get instant confirmation — no back-and-forth calls.</div>
+        </div>
+        <div class="col-md-4 step-card">
+          <div class="step-num">03</div>
+          <div class="step-title">Pick up & drive</div>
+          <div class="step-desc">Show your booking ID at the counter, do a 2-minute walkaround, and you're on the road.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="route-divider"><span class="dot"></span><span class="dash-line"></span></div>
+      <div class="section-eyebrow">Why Drift</div>
+      <h2 class="section-title mb-4">Built for drivers, not paperwork</h2>
+      <div class="row g-4">
+        <div class="col-md-3 col-6">
+          <i class="bi bi-shield-check fs-3" style="color:var(--signal-deep)"></i>
+          <div class="step-title mt-2" style="font-size:.98rem">Verified fleet</div>
+          <div class="step-desc">Every car inspected before listing.</div>
+        </div>
+        <div class="col-md-3 col-6">
+          <i class="bi bi-tag fs-3" style="color:var(--signal-deep)"></i>
+          <div class="step-title mt-2" style="font-size:.98rem">No hidden fees</div>
+          <div class="step-desc">The price you see is the price you pay.</div>
+        </div>
+        <div class="col-md-3 col-6">
+          <i class="bi bi-arrow-repeat fs-3" style="color:var(--signal-deep)"></i>
+          <div class="step-title mt-2" style="font-size:.98rem">Free cancellation</div>
+          <div class="step-desc">Plans change — cancel up to 24h before.</div>
+        </div>
+        <div class="col-md-3 col-6">
+          <i class="bi bi-headset fs-3" style="color:var(--signal-deep)"></i>
+          <div class="step-title mt-2" style="font-size:.98rem">24/7 support</div>
+          <div class="step-desc">Roadside help, any city, any hour.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bg-soft">
+    <div class="container">
+      <div class="route-divider"><span class="dot"></span><span class="dash-line"></span></div>
+      <div class="section-eyebrow">Testimonials</div>
+      <h2 class="section-title mb-4">Drivers on the record</h2>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="bg-white p-4 rounded-3 border h-100" style="border-left:3px solid var(--signal) !important">
+            <div style="color:var(--signal-deep)">★★★★★</div>
+            <p class="mt-2 mb-3 fst-italic" style="color:var(--steel);font-size:.92rem">"Booked an SUV for a weekend trip in under three minutes — pickup was just as fast."</p>
+            <div class="fw-bold" style="font-size:.88rem">Maya R. — Downtown Hub</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="bg-white p-4 rounded-3 border h-100" style="border-left:3px solid var(--signal) !important">
+            <div style="color:var(--signal-deep)">★★★★★</div>
+            <p class="mt-2 mb-3 fst-italic" style="color:var(--steel);font-size:.92rem">"Transparent pricing finally. No surprise charges at the counter like other rental apps."</p>
+            <div class="fw-bold" style="font-size:.88rem">Daniel K. — Airport T2</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="bg-white p-4 rounded-3 border h-100" style="border-left:3px solid var(--signal) !important">
+            <div style="color:var(--signal-deep)">★★★★★</div>
+            <p class="mt-2 mb-3 fst-italic" style="color:var(--steel);font-size:.92rem">"Extended my booking from my phone in 30 seconds while already on the trip."</p>
+            <div class="fw-bold" style="font-size:.88rem">Priya S. — Harbor Point</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════════ CARS LISTING ══════════════ -->
+<div class="page" id="page-cars">
+  <div class="page-banner">
+    <div class="container">
+      <div class="breadcrumb-drift mb-2"><a onclick="showPage('home')">Home</a><span class="sep">/</span>Browse Cars</div>
+      <h1>Browse the fleet</h1>
+    </div>
+  </div>
+  <div class="container py-5">
+    <div class="row g-4">
+      <div class="col-lg-3">
+        <div class="filter-card">
+          <h6><i class="bi bi-sliders me-1"></i>Filters</h6>
+          <div class="filter-group">
+            <label class="form-label">Search</label>
+            <input type="text" class="form-control form-control-sm" id="f-search" placeholder="Search brand or model" oninput="applyFilters()">
+          </div>
+          <div class="filter-group">
+            <label class="form-label">Car Type</label>
+            <div id="f-type-chips">
+              <span class="filter-chip active" data-val="">All</span>
+              <span class="filter-chip" data-val="Economy">Economy</span>
+              <span class="filter-chip" data-val="Sedan">Sedan</span>
+              <span class="filter-chip" data-val="SUV">SUV</span>
+              <span class="filter-chip" data-val="Luxury">Luxury</span>
+              <span class="filter-chip" data-val="Electric">Electric</span>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label class="form-label">Brand</label>
+            <select class="form-select form-select-sm" id="f-brand" onchange="applyFilters()">
+              <option value="">All Brands</option>
+              <option>Toyota</option><option>Honda</option><option>BMW</option><option>Tesla</option><option>Ford</option><option>Mercedes-Benz</option><option>Hyundai</option><option>Jeep</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="form-label">Max Price / day: $<span id="f-price-val">200</span></label>
+            <input type="range" class="form-range" min="30" max="200" value="200" id="f-price" oninput="document.getElementById('f-price-val').textContent=this.value;applyFilters()">
+          </div>
+          <div class="filter-group mb-0">
+            <label class="form-label">Availability</label>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="f-avail-only" onchange="applyFilters()"><label class="form-check-label" style="font-size:.85rem" for="f-avail-only">Available only</label></div>
+          </div>
+          <button class="btn-outline-drift w-100 mt-2" onclick="resetFilters()">Reset Filters</button>
+        </div>
+      </div>
+      <div class="col-lg-9">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div class="text-muted" id="results-count" style="font-size:.88rem">Showing all cars</div>
+          <select class="form-select form-select-sm" style="width:auto" id="f-sort" onchange="applyFilters()">
+            <option value="rec">Recommended</option>
+            <option value="low">Price: Low to High</option>
+            <option value="high">Price: High to Low</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </div>
+        <div class="row g-4" id="cars-grid"></div>
+        <div id="no-results" class="text-center py-5 d-none">
+          <i class="bi bi-emoji-frown fs-1" style="color:var(--steel)"></i>
+          <p class="mt-2 text-muted">No cars match your filters. Try widening your search.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ CAR DETAIL ══════════════ -->
+<div class="page" id="page-detail">
+  <div class="container py-5" id="detail-content"></div>
+</div>
+
+<!-- ══════════════ AUTH ══════════════ -->
+<div class="page" id="page-auth">
+  <div class="container py-5" style="max-width:480px">
+    <div class="form-card">
+      <div class="d-flex mb-4">
+        <div class="auth-tab active" id="tab-login" onclick="switchAuth('login')">Sign In</div>
+        <div class="auth-tab" id="tab-register" onclick="switchAuth('register')">Create Account</div>
+      </div>
+
+      <div id="auth-login">
+        <h4 class="fw-bold mb-1" style="font-family:var(--font-display)">Welcome back</h4>
+        <p class="text-muted mb-4" style="font-size:.88rem">Sign in to manage your bookings.</p>
+        <div class="err-msg mb-3" id="login-error" style="background:var(--red-bg);padding:.7rem 1rem;border-radius:6px;display:none"></div>
+        <div class="mb-3">
+          <label class="form-label-drift">Email Address</label>
+          <input type="email" class="form-control-drift" id="login-email" placeholder="you@example.com">
+          <div class="err-msg" id="err-login-email">Enter a valid email address.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label-drift">Password</label>
+          <input type="password" class="form-control-drift" id="login-password" placeholder="••••••••">
+          <div class="err-msg" id="err-login-password">Password is required.</div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3" style="font-size:.83rem">
+          <label class="d-flex align-items-center gap-2"><input type="checkbox"> Remember me</label>
+          <a href="#" style="color:var(--signal-deep);font-weight:600">Forgot password?</a>
+        </div>
+        <button class="btn-signal w-100" onclick="handleLogin()" id="login-btn">Sign In</button>
+      </div>
+
+      <div id="auth-register" style="display:none">
+        <h4 class="fw-bold mb-1" style="font-family:var(--font-display)">Create your account</h4>
+        <p class="text-muted mb-4" style="font-size:.88rem">Book cars in seconds — no repeat forms.</p>
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label-drift">First Name</label>
+            <input type="text" class="form-control-drift" id="reg-fname">
+            <div class="err-msg" id="err-reg-fname">Required.</div>
+          </div>
+          <div class="col-6">
+            <label class="form-label-drift">Last Name</label>
+            <input type="text" class="form-control-drift" id="reg-lname">
+            <div class="err-msg" id="err-reg-lname">Required.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label-drift">Email Address</label>
+            <input type="email" class="form-control-drift" id="reg-email">
+            <div class="err-msg" id="err-reg-email">Enter a valid email address.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label-drift">Phone Number</label>
+            <input type="tel" class="form-control-drift" id="reg-phone" placeholder="(555) 000-0000">
+          </div>
+          <div class="col-6">
+            <label class="form-label-drift">Password</label>
+            <input type="password" class="form-control-drift" id="reg-password">
+            <div class="err-msg" id="err-reg-password">Min. 8 characters.</div>
+          </div>
+          <div class="col-6">
+            <label class="form-label-drift">Confirm Password</label>
+            <input type="password" class="form-control-drift" id="reg-confirm">
+            <div class="err-msg" id="err-reg-confirm">Passwords must match.</div>
+          </div>
+          <div class="col-12">
+            <label class="d-flex align-items-start gap-2" style="font-size:.83rem"><input type="checkbox" id="reg-terms" class="mt-1"> I agree to the Terms of Service and Privacy Policy</label>
+            <div class="err-msg" id="err-reg-terms">You must accept the terms to continue.</div>
+          </div>
+          <div class="col-12">
+            <button class="btn-signal w-100" onclick="handleRegister()" id="register-btn">Create Account</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center mt-4">
+      <a onclick="showPage('admin-login')" style="color:var(--steel);font-size:.85rem;cursor:pointer"><i class="bi bi-shield-lock me-1"></i>Admin Login</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ADMIN LOGIN ══════════════ -->
+<div class="page" id="page-admin-login">
+  <div class="container py-5" style="max-width:440px">
+    <div class="form-card">
+      <div class="text-center mb-4">
+        <i class="bi bi-shield-lock fs-1" style="color:var(--signal-deep)"></i>
+        <h4 class="fw-bold mt-2" style="font-family:var(--font-display)">Admin Console</h4>
+        <p class="text-muted" style="font-size:.86rem">Restricted access — fleet & booking management</p>
+      </div>
+      <div class="mb-3">
+        <label class="form-label-drift">Admin Email</label>
+        <input type="email" class="form-control-drift" id="admin-email" placeholder="admin@drift.com">
+      </div>
+      <div class="mb-3">
+        <label class="form-label-drift">Admin Password</label>
+        <input type="password" class="form-control-drift" id="admin-password" placeholder="••••••••">
+      </div>
+      <div class="err-msg mb-3" id="admin-login-error" style="background:var(--red-bg);padding:.7rem 1rem;border-radius:6px;display:none"></div>
+      <button class="btn-dark-o w-100" onclick="handleAdminLogin()">Access Dashboard</button>
+      <div class="text-center text-muted mt-3" style="font-size:.8rem">Sign in with an account whose role is set to "admin".</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ BOOKING FORM ══════════════ -->
+<div class="page" id="page-booking">
+  <div class="page-banner">
+    <div class="container">
+      <div class="breadcrumb-drift mb-2"><a onclick="showPage('home')">Home</a><span class="sep">/</span><a onclick="showPage('cars')">Cars</a><span class="sep">/</span>Book</div>
+      <h1>Complete your booking</h1>
+    </div>
+  </div>
+  <div class="container py-5">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="form-card mb-4">
+          <h5 class="fw-bold mb-3" style="font-family:var(--font-display)"><i class="bi bi-calendar3 me-2"></i>Rental Details</h5>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label-drift">Pickup Location</label>
+              <select class="form-control-drift" id="bk-pickup-loc"><option>Downtown Hub — Main St</option><option>Airport Terminal 2</option><option>Westside Station</option><option>Harbor Point</option></select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-drift">Return Location</label>
+              <select class="form-control-drift" id="bk-return-loc"><option>Downtown Hub — Main St</option><option>Airport Terminal 2</option><option>Westside Station</option><option>Harbor Point</option></select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-drift">Pickup Date</label>
+              <input type="date" class="form-control-drift" id="bk-pickup-date" onchange="updateSummary()">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-drift">Return Date</label>
+              <input type="date" class="form-control-drift" id="bk-return-date" onchange="updateSummary()">
+            </div>
+          </div>
+        </div>
+        <div class="form-card mb-4">
+          <h5 class="fw-bold mb-3" style="font-family:var(--font-display)"><i class="bi bi-person me-2"></i>Driver Details</h5>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label-drift">Full Name</label>
+              <input type="text" class="form-control-drift" id="bk-name">
+              <div class="err-msg" id="err-bk-name">Required.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-drift">License Number</label>
+              <input type="text" class="form-control-drift" id="bk-license">
+              <div class="err-msg" id="err-bk-license">Required.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-drift">Email</label>
+              <input type="email" class="form-control-drift" id="bk-email">
+              <div class="err-msg" id="err-bk-email">Enter a valid email.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-drift">Phone</label>
+              <input type="tel" class="form-control-drift" id="bk-phone">
+              <div class="err-msg" id="err-bk-phone">Required.</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-card">
+          <h5 class="fw-bold mb-3" style="font-family:var(--font-display)"><i class="bi bi-credit-card me-2"></i>Payment</h5>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label-drift">Card Number</label>
+              <input type="text" class="form-control-drift" id="bk-card" placeholder="1234 1234 1234 1234" maxlength="19" oninput="formatCard(this)">
+              <div class="err-msg" id="err-bk-card">Enter a valid 16-digit card number.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-drift">Expiry</label>
+              <input type="text" class="form-control-drift" id="bk-expiry" placeholder="MM / YY" maxlength="7" oninput="formatExpiry(this)">
+              <div class="err-msg" id="err-bk-expiry">Required.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-drift">CVV</label>
+              <input type="text" class="form-control-drift" id="bk-cvv" placeholder="123" maxlength="4">
+              <div class="err-msg" id="err-bk-cvv">Required.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="summary-card">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div id="sum-icon" style="font-size:2.4rem">🚗</div>
+            <div>
+              <div class="fw-bold" id="sum-name" style="font-family:var(--font-display)">—</div>
+              <div style="font-size:.78rem;color:rgba(255,255,255,.55)" id="sum-type">—</div>
+            </div>
+          </div>
+          <div class="summary-row"><span>Daily Rate</span><span id="sum-rate">$0</span></div>
+          <div class="summary-row"><span>Number of Days</span><span id="sum-days">1</span></div>
+          <div class="summary-row"><span>Subtotal</span><span id="sum-subtotal">$0</span></div>
+          <div class="summary-row"><span>Tax & Fees (12%)</span><span id="sum-tax">$0</span></div>
+          <div class="summary-row total"><span>Total</span><span class="amt" id="sum-total">$0</span></div>
+          <button class="btn-signal w-100 mt-3" onclick="submitBooking()">Confirm & Pay</button>
+          <div class="text-center mt-2" style="font-size:.75rem;color:rgba(255,255,255,.45)"><i class="bi bi-lock-fill me-1"></i>Secure, encrypted checkout</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ CONFIRMATION ══════════════ -->
+<div class="page" id="page-confirm">
+  <div class="container py-5" style="max-width:600px">
+    <div class="text-center mb-4">
+      <div style="width:70px;height:70px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+        <i class="bi bi-check-lg fs-2" style="color:var(--green)"></i>
+      </div>
+      <h3 class="fw-bold" style="font-family:var(--font-display)">Booking confirmed!</h3>
+      <p class="text-muted">A confirmation has been sent to your email. Here are your trip details.</p>
+    </div>
+    <div class="form-card" id="confirm-details"></div>
+    <div class="d-flex gap-3 justify-content-center mt-4">
+      <button class="btn-outline-drift" onclick="showPage('history')">View My Bookings</button>
+      <button class="btn-signal" onclick="showPage('cars')">Book Another Car</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ BOOKING HISTORY ══════════════ -->
+<div class="page" id="page-history">
+  <div class="page-banner">
+    <div class="container">
+      <div class="breadcrumb-drift mb-2"><a onclick="showPage('home')">Home</a><span class="sep">/</span>My Bookings</div>
+      <h1>Booking history</h1>
+    </div>
+  </div>
+  <div class="container py-5">
+    <div class="table-responsive">
+      <table class="drift-table">
+        <thead><tr><th>Booking ID</th><th>Car</th><th>Pickup</th><th>Return</th><th>Total</th><th>Status</th><th></th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PROFILE ══════════════ -->
+<div class="page" id="page-profile">
+  <div class="page-banner">
+    <div class="container">
+      <div class="breadcrumb-drift mb-2"><a onclick="showPage('home')">Home</a><span class="sep">/</span>My Profile</div>
+      <h1>Account settings</h1>
+    </div>
+  </div>
+  <div class="container py-5">
+    <div class="row g-4">
+      <div class="col-lg-3">
+        <div class="profile-side">
+          <div class="profile-avatar" id="profile-avatar-el">—</div>
+          <div class="fw-bold" style="font-family:var(--font-display)" id="profile-name">—</div>
+          <div class="text-muted" style="font-size:.82rem" id="profile-email">—</div>
+          <hr>
+          <div class="profile-nav text-start">
+            <a class="active"><i class="bi bi-person"></i>Personal Info</a>
+            <a onclick="showPage('history')"><i class="bi bi-clock-history"></i>Booking History</a>
+            <a><i class="bi bi-credit-card"></i>Payment Methods</a>
+            <a><i class="bi bi-bell"></i>Notifications</a>
+            <a onclick="handleSignOut()" style="color:var(--red)"><i class="bi bi-box-arrow-right"></i>Sign Out</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-9">
+        <div class="form-card">
+          <h5 class="fw-bold mb-3" style="font-family:var(--font-display)">Personal information</h5>
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label-drift">First Name</label><input type="text" class="form-control-drift" value="Jordan"></div>
+            <div class="col-md-6"><label class="form-label-drift">Last Name</label><input type="text" class="form-control-drift" value="Diaz"></div>
+            <div class="col-md-6"><label class="form-label-drift">Email</label><input type="email" class="form-control-drift" value="jordan.diaz@email.com"></div>
+            <div class="col-md-6"><label class="form-label-drift">Phone</label><input type="tel" class="form-control-drift" value="(555) 213-8890"></div>
+            <div class="col-md-6"><label class="form-label-drift">Driver's License No.</label><input type="text" class="form-control-drift" value="D-2284910"></div>
+            <div class="col-md-6"><label class="form-label-drift">Date of Birth</label><input type="date" class="form-control-drift" value="1996-04-12"></div>
+          </div>
+          <button class="btn-signal mt-4" onclick="showToast('Profile updated successfully.')">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ CONTACT ══════════════ -->
+<div class="page" id="page-contact">
+  <div class="page-banner">
+    <div class="container">
+      <div class="breadcrumb-drift mb-2"><a onclick="showPage('home')">Home</a><span class="sep">/</span>Contact Us</div>
+      <h1>We're here to help</h1>
+    </div>
+  </div>
+  <div class="container py-5">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="filter-card mb-3">
+          <i class="bi bi-telephone fs-4" style="color:var(--signal-deep)"></i>
+          <h6 class="mt-2">Call Us</h6>
+          <p class="text-muted mb-0" style="font-size:.86rem">1-800-DRIFT-00<br>Mon–Sun, 6am–11pm</p>
+        </div>
+        <div class="filter-card mb-3">
+          <i class="bi bi-envelope fs-4" style="color:var(--signal-deep)"></i>
+          <h6 class="mt-2">Email Us</h6>
+          <p class="text-muted mb-0" style="font-size:.86rem">support@drift-rentals.com</p>
+        </div>
+        <div class="filter-card">
+          <i class="bi bi-geo-alt fs-4" style="color:var(--signal-deep)"></i>
+          <h6 class="mt-2">Headquarters</h6>
+          <p class="text-muted mb-0" style="font-size:.86rem">400 Main Street, Suite 210<br>Downtown Hub</p>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div class="form-card">
+          <div id="contact-form-body">
+            <h5 class="fw-bold mb-3" style="font-family:var(--font-display)">Send us a message</h5>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label-drift">Full Name</label>
+                <input type="text" class="form-control-drift" id="c-name">
+                <div class="err-msg" id="err-c-name">Required.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label-drift">Email</label>
+                <input type="email" class="form-control-drift" id="c-email">
+                <div class="err-msg" id="err-c-email">Enter a valid email.</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label-drift">Phone (optional)</label>
+                <input type="tel" class="form-control-drift" id="c-phone">
+              </div>
+              <div class="col-12">
+                <label class="form-label-drift">Message</label>
+                <textarea class="form-control-drift" id="c-message" rows="5"></textarea>
+                <div class="err-msg" id="err-c-message">Message must be at least 10 characters.</div>
+              </div>
+              <div class="col-12"><button class="btn-signal" onclick="submitContactForm()">Send Message</button></div>
+            </div>
+          </div>
+          <div id="contact-success" style="display:none" class="text-center py-4">
+            <i class="bi bi-check-circle fs-1" style="color:var(--green)"></i>
+            <h5 class="fw-bold mt-3" style="font-family:var(--font-display)">Message sent</h5>
+            <p class="text-muted">We'll get back to you within 24 hours.</p>
+            <button class="btn-outline-drift" onclick="resetContactForm()">Send Another Message</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ADMIN DASHBOARD ══════════════ -->
+<div class="page" id="page-admin-dashboard">
+  <div class="admin-shell">
+    <div class="admin-side">
+      <a class="active" data-adm="admin-dashboard" onclick="showAdminPage('admin-dashboard')"><i class="bi bi-speedometer2"></i>Dashboard</a>
+      <a data-adm="admin-cars" onclick="showAdminPage('admin-cars')"><i class="bi bi-car-front"></i>Manage Cars</a>
+      <a data-adm="admin-bookings" onclick="showAdminPage('admin-bookings')"><i class="bi bi-journal-check"></i>Bookings</a>
+      <a data-adm="admin-users" onclick="showAdminPage('admin-users')"><i class="bi bi-people"></i>Users</a>
+      <a onclick="showPage('home')"><i class="bi bi-box-arrow-left"></i>Exit Admin</a>
+    </div>
+    <div class="admin-main">
+      <div id="admin-page-dashboard">
+        <h3 class="fw-bold mb-1" style="font-family:var(--font-display)">Dashboard</h3>
+        <p class="text-muted mb-4">Fleet performance at a glance.</p>
+        <div class="row g-3 mb-4">
+          <div class="col-md-3 col-6"><div class="kpi-card"><div class="kpi-num" id="kpi-total-cars">—</div><div class="kpi-lbl">Total Cars</div></div></div>
+          <div class="col-md-3 col-6"><div class="kpi-card"><div class="kpi-num" id="kpi-total-bookings">—</div><div class="kpi-lbl">Total Bookings</div></div></div>
+          <div class="col-md-3 col-6"><div class="kpi-card"><div class="kpi-num" id="kpi-revenue">—</div><div class="kpi-lbl">Revenue (all time)</div></div></div>
+          <div class="col-md-3 col-6"><div class="kpi-card"><div class="kpi-num" id="kpi-total-users">—</div><div class="kpi-lbl">Registered Users</div></div></div>
+        </div>
+        <div class="row g-3">
+          <div class="col-lg-7">
+            <div class="kpi-card">
+              <h6 class="fw-bold mb-3">Recent bookings</h6>
+              <div class="table-responsive">
+                <table class="drift-table">
+                  <thead><tr><th>ID</th><th>Customer</th><th>Car</th><th>Status</th></tr></thead>
+                  <tbody id="admin-recent-bookings-body"><tr><td colspan="4" class="text-center text-muted py-3">Loading…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="kpi-card">
+              <h6 class="fw-bold mb-3">Fleet by type</h6>
+              <div class="mb-2 d-flex justify-content-between" style="font-size:.85rem"><span>SUV</span><span class="text-muted">34</span></div>
+              <div class="progress mb-3" style="height:6px"><div class="progress-bar" style="width:34%;background:var(--signal)"></div></div>
+              <div class="mb-2 d-flex justify-content-between" style="font-size:.85rem"><span>Sedan</span><span class="text-muted">28</span></div>
+              <div class="progress mb-3" style="height:6px"><div class="progress-bar" style="width:28%;background:var(--signal)"></div></div>
+              <div class="mb-2 d-flex justify-content-between" style="font-size:.85rem"><span>Economy</span><span class="text-muted">26</span></div>
+              <div class="progress mb-3" style="height:6px"><div class="progress-bar" style="width:26%;background:var(--signal)"></div></div>
+              <div class="mb-2 d-flex justify-content-between" style="font-size:.85rem"><span>Electric</span><span class="text-muted">18</span></div>
+              <div class="progress mb-3" style="height:6px"><div class="progress-bar" style="width:18%;background:var(--signal)"></div></div>
+              <div class="mb-2 d-flex justify-content-between" style="font-size:.85rem"><span>Luxury</span><span class="text-muted">14</span></div>
+              <div class="progress" style="height:6px"><div class="progress-bar" style="width:14%;background:var(--signal)"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="admin-page-cars" style="display:none">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <div><h3 class="fw-bold mb-1" style="font-family:var(--font-display)">Manage cars</h3><p class="text-muted mb-0">Add, edit or remove vehicles from the fleet.</p></div>
+          <button class="btn-signal" onclick="openCarModal()"><i class="bi bi-plus-lg me-1"></i>Add New Car</button>
+        </div>
+        <div class="table-responsive">
+          <table class="drift-table">
+            <thead><tr><th>Car</th><th>Type</th><th>Brand</th><th>Price/Day</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="admin-cars-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="admin-page-bookings" style="display:none">
+        <h3 class="fw-bold mb-1" style="font-family:var(--font-display)">All bookings</h3>
+        <p class="text-muted mb-4">Every reservation across the platform.</p>
+        <div class="table-responsive">
+          <table class="drift-table">
+            <thead><tr><th>Booking ID</th><th>Customer</th><th>Car</th><th>Pickup</th><th>Return</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody id="admin-bookings-body"><tr><td colspan="7" class="text-center text-muted py-4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="admin-page-users" style="display:none">
+        <h3 class="fw-bold mb-1" style="font-family:var(--font-display)">Users</h3>
+        <p class="text-muted mb-4">Registered customer accounts.</p>
+        <div class="table-responsive">
+          <table class="drift-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Status</th></tr></thead>
+            <tbody id="admin-users-body"><tr><td colspan="5" class="text-center text-muted py-4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ CAR MODAL (Add/Edit) ══════════════ -->
+<div class="modal fade" id="carModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header" style="border-bottom:1px solid #EEF0F2">
+        <h5 class="modal-title fw-bold" id="carModalTitle" style="font-family:var(--font-display)">Add New Car</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cm-id">
+        <div class="row g-3">
+          <div class="col-12"><label class="form-label-drift">Car Name / Model</label><input type="text" class="form-control-drift" id="cm-name" placeholder="e.g. Tesla Model 3"></div>
+          <div class="col-6"><label class="form-label-drift">Brand</label><input type="text" class="form-control-drift" id="cm-brand" placeholder="e.g. Tesla"></div>
+          <div class="col-6"><label class="form-label-drift">Type</label>
+            <select class="form-control-drift" id="cm-type"><option>Economy</option><option>Sedan</option><option>SUV</option><option>Luxury</option><option>Electric</option></select>
+          </div>
+          <div class="col-6"><label class="form-label-drift">Price / Day ($)</label><input type="number" class="form-control-drift" id="cm-price" placeholder="65"></div>
+          <div class="col-6"><label class="form-label-drift">Seats</label><input type="number" class="form-control-drift" id="cm-seats" placeholder="5"></div>
+          <div class="col-6"><label class="form-label-drift">Transmission</label>
+            <select class="form-control-drift" id="cm-trans"><option>Automatic</option><option>Manual</option></select>
+          </div>
+          <div class="col-6"><label class="form-label-drift">Availability</label>
+            <select class="form-control-drift" id="cm-avail"><option>Available</option><option>Limited</option><option>Unavailable</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #EEF0F2">
+        <button class="btn-outline-drift" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn-signal" onclick="saveCar()">Save Car</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer class="footer-drift">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="brand-drift mb-3"><span class="dot">●</span>DRIFT</div>
+        <p style="font-size:.86rem;max-width:280px">Modern car rental, built for people who'd rather be driving than waiting in line.</p>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Company</h6>
+        <a onclick="showPage('home')">About Us</a><a onclick="showPage('cars')">Our Fleet</a><a onclick="showPage('contact')">Contact</a>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Account</h6>
+        <a onclick="showPage('auth')">Sign In</a><a onclick="showPage('auth')">Register</a><a onclick="requireAuth('history')">My Bookings</a>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Support</h6>
+        <a onclick="showPage('contact')">Help Center</a><a href="#">Cancellation Policy</a><a href="#">Insurance</a>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6>Legal</h6>
+        <a href="#">Terms of Service</a><a href="#">Privacy Policy</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>© 2026 DRIFT Car Rentals. All rights reserved.</div>
+      <div class="d-flex gap-3"><i class="bi bi-facebook"></i><i class="bi bi-instagram"></i><i class="bi bi-twitter-x"></i></div>
+    </div>
+  </div>
+</footer>
+
+<div class="toast-drift" id="toast"><i class="bi bi-check-circle-fill me-2" style="color:var(--signal)"></i><span id="toast-msg"></span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ══ DATA ══
+const CARS = [
+  {id:1,name:'Toyota Corolla',brand:'Toyota',type:'Economy',price:42,seats:5,trans:'Automatic',mpg:'34 mpg',avail:'Available',icon:'🚗',color:'#1F2D3D'},
+  {id:2,name:'Honda Civic',brand:'Honda',type:'Sedan',price:49,seats:5,trans:'Automatic',mpg:'32 mpg',avail:'Available',icon:'🚙',color:'#2A3A2A'},
+  {id:3,name:'Jeep Wrangler',brand:'Jeep',type:'SUV',price:89,seats:5,trans:'Manual',mpg:'21 mpg',avail:'Limited',icon:'🚙',color:'#3A2A1A'},
+  {id:4,name:'BMW 5 Series',brand:'BMW',type:'Luxury',price:139,seats:5,trans:'Automatic',mpg:'27 mpg',avail:'Available',icon:'🚘',color:'#1A1A2E'},
+  {id:5,name:'Tesla Model 3',brand:'Tesla',type:'Electric',price:95,seats:5,trans:'Automatic',mpg:'132 MPGe',avail:'Available',icon:'🔋',color:'#1A2A2A'},
+  {id:6,name:'Ford Explorer',brand:'Ford',type:'SUV',price:79,seats:7,trans:'Automatic',mpg:'24 mpg',avail:'Available',icon:'🚙',color:'#2A1A1A'},
+  {id:7,name:'Mercedes-Benz C-Class',brand:'Mercedes-Benz',type:'Luxury',price:155,seats:5,trans:'Automatic',mpg:'29 mpg',avail:'Unavailable',icon:'🚘',color:'#1A1A1A'},
+  {id:8,name:'Hyundai Ioniq 5',brand:'Hyundai',type:'Electric',price:75,seats:5,trans:'Automatic',mpg:'114 MPGe',avail:'Available',icon:'🔋',color:'#1A2A3A'},
+  {id:9,name:'Toyota Camry',brand:'Toyota',type:'Sedan',price:55,seats:5,trans:'Automatic',mpg:'32 mpg',avail:'Limited',icon:'🚙',color:'#2A2A1A'},
+  {id:10,name:'Ford Mustang',brand:'Ford',type:'Luxury',price:110,seats:4,trans:'Manual',mpg:'25 mpg',avail:'Available',icon:'🏎️',color:'#3A1A1A'},
+  {id:11,name:'Honda CR-V',brand:'Honda',type:'SUV',price:68,seats:5,trans:'Automatic',mpg:'30 mpg',avail:'Available',icon:'🚙',color:'#2A3A1A'},
+  {id:12,name:'Hyundai Elantra',brand:'Hyundai',type:'Economy',price:38,seats:5,trans:'Automatic',mpg:'36 mpg',avail:'Available',icon:'🚗',color:'#1A2A2A'},
+];
+let currentCarId = null;
+let currentUser = null;   // {uid, name, email, role}
+let bookings = [];        // this signed-in user's bookings, loaded from Firestore
+let adminCars = JSON.parse(JSON.stringify(CARS));
+
+// ══════════════════════════════════════════════════════════
+// 🔥 FIREBASE SETUP
+// Replace the values below with YOUR OWN Firebase project config.
+// Get this from: Firebase Console → Project Settings → General → Your apps → SDK setup and configuration
+// ══════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyCtU9CpVMjR_wESnSL8rEU-8B-WkZeqhkM",
+  authDomain: "drift-rentals.firebaseapp.com",
+  projectId: "drift-rentals",
+  storageBucket: "drift-rentals.firebasestorage.app",
+  messagingSenderId: "873518460920",
+  appId: "1:873518460920:web:8ae0d7886c5d3b2742700d",
+  measurementId: "G-40XKRYVFTT"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let carsUnsub = null, bookingsUnsub = null, allBookingsUnsub = null, allUsersUnsub = null;
+
+// Seed the `cars` collection once if it's empty, so admin edits persist for everyone.
+async function seedCarsIfEmpty(){
+  const snap = await db.collection('cars').limit(1).get();
+  if(snap.empty){
+    const batch = db.batch();
+    CARS.forEach(c=>{ batch.set(db.collection('cars').doc(String(c.id)), c); });
+    await batch.commit();
+  }
+}
+
+// Keep the in-memory CARS/adminCars arrays synced live with Firestore.
+function listenToCars(){
+  if(carsUnsub) carsUnsub();
+  carsUnsub = db.collection('cars').orderBy('id').onSnapshot(snap=>{
+    const list = snap.docs.map(d=>d.data());
+    if(list.length){
+      CARS.length = 0; CARS.push(...list);
+      adminCars.length = 0; adminCars.push(...list);
+      renderFeatured();
+      if(document.getElementById('page-cars').classList.contains('active')) applyFilters();
+      renderAdminCars();
+      updateDashboardKpis();
+    }
+  });
+}
+
+// Auth state persists automatically across refreshes/devices via Firebase.
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    let role='customer', name=user.email;
+    try{
+      const doc = await db.collection('users').doc(user.uid).get();
+      if(doc.exists){ const d=doc.data(); name=(d.fname&&d.lname)?(d.fname+' '+d.lname):user.email; role=d.role||'customer'; }
+    }catch(e){}
+    currentUser = {uid:user.uid, name, email:user.email, role};
+    document.getElementById('nav-avatar').classList.remove('d-none');
+    document.getElementById('nav-avatar').textContent = name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+    listenToMyBookings(user.uid);
+  } else {
+    currentUser = null;
+    bookings = [];
+    if(bookingsUnsub){ bookingsUnsub(); bookingsUnsub=null; }
+    document.getElementById('nav-avatar').classList.add('d-none');
+  }
+});
+
+function listenToMyBookings(uid){
+  if(bookingsUnsub) bookingsUnsub();
+  bookingsUnsub = db.collection('bookings').where('uid','==',uid).orderBy('createdAt','desc')
+    .onSnapshot(snap=>{
+      bookings = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(document.getElementById('page-history').classList.contains('active')) renderHistory();
+    }, err=>{ console.error(err); });
+}
+
+function listenToAllBookingsForAdmin(){
+  if(allBookingsUnsub) allBookingsUnsub();
+  allBookingsUnsub = db.collection('bookings').orderBy('createdAt','desc').onSnapshot(snap=>{
+    const all = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderAdminBookingsTable(all);
+    renderAdminRecentBookings(all.slice(0,4));
+    document.getElementById('kpi-total-bookings').textContent = all.length;
+    const revenue = all.reduce((s,b)=>s+(+b.total||0),0);
+    document.getElementById('kpi-revenue').textContent = '$'+revenue.toLocaleString();
+  });
+}
+function listenToAllUsersForAdmin(){
+  if(allUsersUnsub) allUsersUnsub();
+  allUsersUnsub = db.collection('users').orderBy('createdAt','desc').onSnapshot(snap=>{
+    const all = snap.docs.map(d=>({uid:d.id, ...d.data()}));
+    renderAdminUsersTable(all);
+    document.getElementById('kpi-total-users').textContent = all.length;
+  });
+}
+function updateDashboardKpis(){
+  document.getElementById('kpi-total-cars').textContent = CARS.length;
+}
+
+// ══ NAVIGATION ══
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const target = document.getElementById('page-'+name);
+  if(target) target.classList.add('active');
+  document.querySelectorAll('.nav-link-drift').forEach(b=>b.classList.toggle('active', b.dataset.nav===name));
+  document.getElementById('mobile-nav').classList.add('d-none');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(name==='cars') renderCars();
+  if(name==='home') renderFeatured();
+  if(name==='history') renderHistory();
+  if(name==='admin-dashboard'){
+    renderAdminCars();
+    updateDashboardKpis();
+    listenToAllBookingsForAdmin();
+    listenToAllUsersForAdmin();
+  }
+  if(name==='booking') updateSummary();
+  if(name==='profile') renderProfile();
+}
+function toggleMobileNav(){ document.getElementById('mobile-nav').classList.toggle('d-none'); }
+function requireAuth(name){
+  if(!currentUser){ showToast('Please sign in to continue.'); showPage('auth'); return; }
+  showPage(name);
+}
+function requireAdmin(){
+  if(currentUser && currentUser.role==='admin'){ showPage('admin-dashboard'); return; }
+  showToast('Admin sign-in required.');
+  showPage('admin-login');
+}
+
+// ══ RENDER CARS ══
+function carMediaHTML(c){
+  return `<div class="car-card-media" style="background:linear-gradient(135deg, ${c.color} 0%, #15181C 100%)">${c.icon}<span class="plate">${c.brand.slice(0,3).toUpperCase()}-${c.id}21</span></div>`;
+}
+function availBadge(a){
+  if(a==='Available') return '<span class="avail-badge badge-avail">Available</span>';
+  if(a==='Limited') return '<span class="avail-badge badge-limited">Limited</span>';
+  return '<span class="avail-badge badge-unavail">Unavailable</span>';
+}
+function carCardHTML(c){
+  return `
+  <div class="col-md-6 col-lg-4">
+    <div class="car-card" onclick="openDetail(${c.id})">
+      ${carMediaHTML(c)}
+      <div class="car-card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <span class="car-type-tag">${c.type}</span>
+          ${availBadge(c.avail)}
+        </div>
+        <div class="car-name">${c.name}</div>
+        <div class="car-specs">
+          <span><i class="bi bi-people"></i>${c.seats} seats</span>
+          <span><i class="bi bi-gear"></i>${c.trans}</span>
+          <span><i class="bi bi-fuel-pump"></i>${c.mpg}</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="car-price">$${c.price}<span class="per">/day</span></div>
+          <button class="btn-outline-drift" style="padding:.45rem 1rem;font-size:.78rem" onclick="event.stopPropagation();openDetail(${c.id})">View</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderFeatured(){
+  const feat = CARS.slice(0,6);
+  document.getElementById('featured-cars').innerHTML = feat.map(carCardHTML).join('');
+}
+function applyFilters(){
+  const search = document.getElementById('f-search').value.toLowerCase();
+  const type = document.querySelector('#f-type-chips .filter-chip.active').dataset.val;
+  const brand = document.getElementById('f-brand').value;
+  const maxPrice = +document.getElementById('f-price').value;
+  const availOnly = document.getElementById('f-avail-only').checked;
+  const sort = document.getElementById('f-sort').value;
+
+  let list = CARS.filter(c=>{
+    if(search && !(c.name.toLowerCase().includes(search) || c.brand.toLowerCase().includes(search))) return false;
+    if(type && c.type !== type) return false;
+    if(brand && c.brand !== brand) return false;
+    if(c.price > maxPrice) return false;
+    if(availOnly && c.avail !== 'Available') return false;
+    return true;
+  });
+  if(sort==='low') list.sort((a,b)=>a.price-b.price);
+  if(sort==='high') list.sort((a,b)=>b.price-a.price);
+  if(sort==='name') list.sort((a,b)=>a.name.localeCompare(b.name));
+
+  document.getElementById('cars-grid').innerHTML = list.map(carCardHTML).join('');
+  document.getElementById('results-count').textContent = `Showing ${list.length} of ${CARS.length} cars`;
+  document.getElementById('no-results').classList.toggle('d-none', list.length>0);
+}
+function renderCars(){
+  document.querySelectorAll('#f-type-chips .filter-chip').forEach(ch=>ch.classList.toggle('active', ch.dataset.val===''));
+  document.getElementById('f-search').value='';
+  document.getElementById('f-brand').value='';
+  document.getElementById('f-price').value=200;
+  document.getElementById('f-price-val').textContent=200;
+  document.getElementById('f-avail-only').checked=false;
+  applyFilters();
+}
+function resetFilters(){ renderCars(); }
+document.addEventListener('click', e=>{
+  if(e.target.classList.contains('filter-chip')){
+    document.querySelectorAll('#f-type-chips .filter-chip').forEach(c=>c.classList.remove('active'));
+    e.target.classList.add('active');
+    applyFilters();
+  }
+});
+function heroSearch(){ showPage('cars'); }
+
+// ══ CAR DETAIL ══
+function openDetail(id){
+  const c = CARS.find(x=>x.id===id);
+  currentCarId = id;
+  document.getElementById('detail-content').innerHTML = `
+  <div class="breadcrumb-drift mb-3" style="color:var(--steel)"><a onclick="showPage('home')" style="color:var(--steel)">Home</a> / <a onclick="showPage('cars')" style="color:var(--steel)">Cars</a> / ${c.name}</div>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="rounded-3 mb-3" style="height:340px;background:linear-gradient(135deg, ${c.color} 0%, #15181C 100%);display:flex;align-items:center;justify-content:center;font-size:7rem">${c.icon}</div>
+      <div class="row g-3">
+        ${[c.icon,'🚗','🔧'].map(ic=>`<div class="col-4"><div class="rounded-3" style="height:90px;background:linear-gradient(135deg, ${c.color} 0%, #15181C 100%);display:flex;align-items:center;justify-content:center;font-size:2rem">${ic}</div></div>`).join('')}
+      </div>
+      <div class="mt-4">
+        <h5 class="fw-bold mb-3" style="font-family:var(--font-display)">Vehicle Features</h5>
+        <div class="row g-3">
+          <div class="col-6 col-md-3"><i class="bi bi-people" style="color:var(--signal-deep)"></i> ${c.seats} Seats</div>
+          <div class="col-6 col-md-3"><i class="bi bi-gear" style="color:var(--signal-deep)"></i> ${c.trans}</div>
+          <div class="col-6 col-md-3"><i class="bi bi-fuel-pump" style="color:var(--signal-deep)"></i> ${c.mpg}</div>
+          <div class="col-6 col-md-3"><i class="bi bi-snow" style="color:var(--signal-deep)"></i> A/C</div>
+          <div class="col-6 col-md-3"><i class="bi bi-bluetooth" style="color:var(--signal-deep)"></i> Bluetooth</div>
+          <div class="col-6 col-md-3"><i class="bi bi-shield-check" style="color:var(--signal-deep)"></i> Insured</div>
+          <div class="col-6 col-md-3"><i class="bi bi-suitcase" style="color:var(--signal-deep)"></i> 2 Bags</div>
+          <div class="col-6 col-md-3"><i class="bi bi-geo-alt" style="color:var(--signal-deep)"></i> GPS Included</div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <h5 class="fw-bold mb-2" style="font-family:var(--font-display)">About this car</h5>
+        <p class="text-muted" style="font-size:.92rem;line-height:1.7">The ${c.name} offers a balanced mix of comfort and efficiency, well-suited for both city driving and longer trips. Fully inspected, sanitized, and ready for pickup with a full tank.</p>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="form-card">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="car-type-tag">${c.type} · ${c.brand}</span>
+            <h3 class="fw-bold mt-1" style="font-family:var(--font-display)">${c.name}</h3>
+          </div>
+          ${availBadge(c.avail)}
+        </div>
+        <div class="car-price mb-3">$${c.price}<span class="per">/day</span></div>
+        <hr>
+        <div class="mb-3">
+          <label class="form-label-drift">Pickup Date</label>
+          <input type="date" class="form-control-drift" id="detail-pickup">
+        </div>
+        <div class="mb-3">
+          <label class="form-label-drift">Return Date</label>
+          <input type="date" class="form-control-drift" id="detail-return">
+        </div>
+        <button class="btn-signal w-100" ${c.avail==='Unavailable'?'disabled style="opacity:.5;cursor:not-allowed"':''} onclick="goToBooking(${c.id})">
+          ${c.avail==='Unavailable' ? 'Currently Unavailable' : 'Book This Car'}
+        </button>
+        <div class="text-center mt-2 text-muted" style="font-size:.78rem"><i class="bi bi-shield-check me-1"></i>Free cancellation up to 24h before pickup</div>
+      </div>
+    </div>
+  </div>`;
+  showPage('detail');
+}
+function goToBooking(id){
+  if(!currentUser){ showToast('Please sign in to book a car.'); showPage('auth'); return; }
+  currentCarId = id;
+  showPage('booking');
+}
+
+// ══ BOOKING SUMMARY ══
+function updateSummary(){
+  const c = CARS.find(x=>x.id===currentCarId) || CARS[0];
+  document.getElementById('sum-icon').textContent = c.icon;
+  document.getElementById('sum-name').textContent = c.name;
+  document.getElementById('sum-type').textContent = c.type + ' · ' + c.brand;
+  document.getElementById('sum-rate').textContent = '$'+c.price;
+  const pStr = document.getElementById('bk-pickup-date').value;
+  const rStr = document.getElementById('bk-return-date').value;
+  let days = 1;
+  if(pStr && rStr){
+    const d = (new Date(rStr) - new Date(pStr)) / 86400000;
+    days = d > 0 ? d : 1;
+  }
+  const subtotal = c.price * days;
+  const tax = Math.round(subtotal*0.12);
+  document.getElementById('sum-days').textContent = days;
+  document.getElementById('sum-subtotal').textContent = '$'+subtotal;
+  document.getElementById('sum-tax').textContent = '$'+tax;
+  document.getElementById('sum-total').textContent = '$'+(subtotal+tax);
+}
+
+function fieldErr(inputId, errId, condition){
+  const el = document.getElementById(inputId), err = document.getElementById(errId);
+  if(!el||!err) return condition;
+  if(condition){ el.classList.add('is-invalid-drift'); el.classList.remove('is-valid-drift'); err.classList.add('show'); }
+  else { el.classList.remove('is-invalid-drift'); el.classList.add('is-valid-drift'); err.classList.remove('show'); }
+  return condition;
+}
+
+async function submitBooking(){
+  if(!currentUser){ showToast('Please sign in to book a car.'); showPage('auth'); return; }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  let valid = true;
+  if(fieldErr('bk-name','err-bk-name', !document.getElementById('bk-name').value.trim())) valid=false;
+  if(fieldErr('bk-license','err-bk-license', !document.getElementById('bk-license').value.trim())) valid=false;
+  if(fieldErr('bk-email','err-bk-email', !emailRegex.test(document.getElementById('bk-email').value.trim()))) valid=false;
+  if(fieldErr('bk-phone','err-bk-phone', !document.getElementById('bk-phone').value.trim())) valid=false;
+  if(fieldErr('bk-card','err-bk-card', document.getElementById('bk-card').value.replace(/\s/g,'').length<16)) valid=false;
+  if(fieldErr('bk-expiry','err-bk-expiry', !document.getElementById('bk-expiry').value.trim())) valid=false;
+  if(fieldErr('bk-cvv','err-bk-cvv', document.getElementById('bk-cvv').value.trim().length<3)) valid=false;
+  if(!valid){ showToast('Please fix the highlighted fields.'); return; }
+
+  const c = CARS.find(x=>x.id===currentCarId) || CARS[0];
+  const total = document.getElementById('sum-total').textContent;
+  const id = 'BK-'+Math.floor(1000+Math.random()*9000);
+  const pickup = document.getElementById('bk-pickup-date').value || '2026-07-04';
+  const ret = document.getElementById('bk-return-date').value || '2026-07-07';
+
+  const bookBtn = document.querySelector('.summary-card .btn-signal');
+  if(bookBtn){ bookBtn.disabled = true; bookBtn.textContent = 'Processing…'; }
+  try{
+    await db.collection('bookings').doc(id).set({
+      uid: currentUser.uid,
+      userName: document.getElementById('bk-name').value.trim() || currentUser.name,
+      userEmail: currentUser.email,
+      car: c.name,
+      pickup, ret,
+      total: parseInt(total.replace('$','')),
+      status: 'Confirmed',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }catch(err){
+    showToast('Could not save booking: ' + (err.message||'please try again.'));
+    if(bookBtn){ bookBtn.disabled = false; bookBtn.textContent = 'Confirm & Pay'; }
+    return;
+  }
+  if(bookBtn){ bookBtn.disabled = false; bookBtn.textContent = 'Confirm & Pay'; }
+
+  document.getElementById('confirm-details').innerHTML = `
+    <div class="row mb-3"><div class="col-6"><span class="text-muted" style="font-size:.8rem">Booking ID</span><div class="fw-bold mono">#${id}</div></div>
+    <div class="col-6 text-end"><span class="status-pill status-confirmed">Confirmed</span></div></div>
+    <hr>
+    <div class="d-flex justify-content-between py-2" style="font-size:.9rem"><span class="text-muted">Vehicle</span><span class="fw-bold">${c.name}</span></div>
+    <div class="d-flex justify-content-between py-2" style="font-size:.9rem"><span class="text-muted">Pickup</span><span class="fw-bold">${formatDate(pickup)}</span></div>
+    <div class="d-flex justify-content-between py-2" style="font-size:.9rem"><span class="text-muted">Return</span><span class="fw-bold">${formatDate(ret)}</span></div>
+    <div class="d-flex justify-content-between py-2" style="border-top:2px solid var(--signal);margin-top:.5rem;padding-top:.8rem"><span class="fw-bold">Total Charged</span><span class="fw-bold" style="color:var(--signal-deep)">${total}</span></div>`;
+  showPage('confirm');
+}
+
+// ══ BOOKING HISTORY ══
+function renderHistory(){
+  if(!currentUser){
+    document.getElementById('history-body').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Please sign in to view your bookings.</td></tr>';
+    return;
+  }
+  document.getElementById('history-body').innerHTML = bookings.map(b=>{
+    const cls = b.status==='Confirmed'?'status-confirmed':(b.status==='Completed'?'status-completed':'status-cancelled');
+    return `<tr>
+      <td class="mono">#${b.id}</td>
+      <td>${b.car}</td>
+      <td>${formatDate(b.pickup)}</td>
+      <td>${formatDate(b.ret)}</td>
+      <td>$${b.total}</td>
+      <td><span class="status-pill ${cls}">${b.status}</span></td>
+      <td><button class="btn-outline-drift" style="padding:.35rem .8rem;font-size:.76rem" onclick="showToast('Opening details for #${b.id}')">View</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="text-center text-muted py-4">No bookings yet.</td></tr>';
+}
+
+// ══ ADMIN: BOOKINGS & USERS (real data from Firestore) ══
+function renderAdminBookingsTable(all){
+  const body = document.getElementById('admin-bookings-body');
+  if(!body) return;
+  body.innerHTML = all.map(b=>{
+    const cls = b.status==='Confirmed'?'status-confirmed':(b.status==='Completed'?'status-completed':'status-cancelled');
+    return `<tr>
+      <td class="mono">#${b.id}</td>
+      <td>${b.userName||b.userEmail||'—'}</td>
+      <td>${b.car}</td>
+      <td>${formatDate(b.pickup)}</td>
+      <td>${formatDate(b.ret)}</td>
+      <td>$${b.total}</td>
+      <td><span class="status-pill ${cls}">${b.status}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="text-center text-muted py-4">No bookings yet.</td></tr>';
+}
+function renderAdminRecentBookings(recent){
+  const body = document.getElementById('admin-recent-bookings-body');
+  if(!body) return;
+  body.innerHTML = recent.map(b=>{
+    const cls = b.status==='Confirmed'?'status-confirmed':(b.status==='Completed'?'status-completed':'status-cancelled');
+    return `<tr><td class="mono">#${b.id}</td><td>${b.userName||b.userEmail||'—'}</td><td>${b.car}</td><td><span class="status-pill ${cls}">${b.status}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="4" class="text-center text-muted py-3">No bookings yet.</td></tr>';
+}
+function renderAdminUsersTable(all){
+  const body = document.getElementById('admin-users-body');
+  if(!body) return;
+  body.innerHTML = all.map(u=>{
+    const joined = u.createdAt && u.createdAt.toDate ? u.createdAt.toDate().toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '—';
+    const name = (u.fname&&u.lname) ? (u.fname+' '+u.lname) : (u.email||'—');
+    return `<tr>
+      <td>${name}</td>
+      <td>${u.email||'—'}</td>
+      <td><span class="status-pill ${u.role==='admin'?'status-confirmed':'status-completed'}">${u.role||'customer'}</span></td>
+      <td>${joined}</td>
+      <td><span class="status-pill status-confirmed">Active</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="text-center text-muted py-4">No registered users yet.</td></tr>';
+}
+
+// ══ PROFILE ══
+function renderProfile(){
+  if(!currentUser) return;
+  const el = document.getElementById('profile-name');
+  const eml = document.getElementById('profile-email');
+  const av = document.getElementById('profile-avatar-el');
+  if(el) el.textContent = currentUser.name;
+  if(eml) eml.textContent = currentUser.email;
+  if(av) av.textContent = currentUser.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+}
+
+// ══ CONTACT FORM ══
+function submitContactForm(){
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  let valid = true;
+  if(fieldErr('c-name','err-c-name', !document.getElementById('c-name').value.trim())) valid=false;
+  if(fieldErr('c-email','err-c-email', !emailRegex.test(document.getElementById('c-email').value.trim()))) valid=false;
+  if(fieldErr('c-message','err-c-message', document.getElementById('c-message').value.trim().length<10)) valid=false;
+  if(!valid) return;
+  document.getElementById('contact-form-body').style.display='none';
+  document.getElementById('contact-success').style.display='block';
+}
+function resetContactForm(){
+  ['c-name','c-email','c-phone','c-message'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.value=''; el.classList.remove('is-valid-drift','is-invalid-drift'); } });
+  document.getElementById('contact-form-body').style.display='block';
+  document.getElementById('contact-success').style.display='none';
+}
+
+// ══ AUTH ══
+function switchAuth(tab){
+  document.getElementById('auth-login').style.display = tab==='login' ? 'block':'none';
+  document.getElementById('auth-register').style.display = tab==='register' ? 'block':'none';
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
+}
+async function handleLogin(){
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  let valid = true;
+  const errBox = document.getElementById('login-error');
+  errBox.style.display='none';
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if(fieldErr('login-email','err-login-email', !emailRegex.test(email))) valid=false;
+  if(fieldErr('login-password','err-login-password', !password)) valid=false;
+  if(!valid) return;
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try{
+    await auth.signInWithEmailAndPassword(email, password);
+    showToast('Signed in successfully. Welcome back!');
+    showPage('home');
+  }catch(err){
+    errBox.textContent = friendlyAuthError(err);
+    errBox.style.display='block';
+    document.getElementById('login-password').classList.add('is-invalid-drift');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+function friendlyAuthError(err){
+  const map = {
+    'auth/invalid-email':'Enter a valid email address.',
+    'auth/user-not-found':'No account found with that email.',
+    'auth/wrong-password':'Incorrect password. Please try again.',
+    'auth/invalid-credential':'Invalid email or password. Please try again.',
+    'auth/email-already-in-use':'An account with this email already exists.',
+    'auth/weak-password':'Password should be at least 6 characters.',
+    'auth/too-many-requests':'Too many attempts. Please wait a moment and try again.'
+  };
+  return map[err.code] || (err.message || 'Something went wrong. Please try again.');
+}
+async function handleSignOut(){
+  await auth.signOut();
+  showToast('You have been signed out.');
+  showPage('home');
+}
+async function handleRegister(){
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  let valid = true;
+  const fname=document.getElementById('reg-fname').value.trim();
+  const lname=document.getElementById('reg-lname').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const password=document.getElementById('reg-password').value;
+  const confirm=document.getElementById('reg-confirm').value;
+  const terms=document.getElementById('reg-terms').checked;
+  if(fieldErr('reg-fname','err-reg-fname', !fname)) valid=false;
+  if(fieldErr('reg-lname','err-reg-lname', !lname)) valid=false;
+  if(fieldErr('reg-email','err-reg-email', !emailRegex.test(email))) valid=false;
+  if(fieldErr('reg-password','err-reg-password', password.length<8)) valid=false;
+  if(fieldErr('reg-confirm','err-reg-confirm', confirm!==password || !confirm)) valid=false;
+  const termsErr = document.getElementById('err-reg-terms');
+  if(!terms){ termsErr.classList.add('show'); valid=false; } else termsErr.classList.remove('show');
+  if(!valid) return;
+
+  const btn = document.getElementById('register-btn');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  try{
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await db.collection('users').doc(cred.user.uid).set({
+      fname, lname, email,
+      phone: document.getElementById('reg-phone').value.trim(),
+      role: 'customer',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast('Account created! Welcome to DRIFT.');
+    showPage('home');
+  }catch(err){
+    showToast(friendlyAuthError(err));
+  }finally{
+    btn.disabled = false; btn.textContent = 'Create Account';
+  }
+}
+
+async function handleAdminLogin(){
+  const errBox = document.getElementById('admin-login-error');
+  errBox.style.display='none';
+  const email = document.getElementById('admin-email').value.trim();
+  const password = document.getElementById('admin-password').value;
+  if(!email || !password){ errBox.textContent='Enter your admin email and password.'; errBox.style.display='block'; return; }
+  try{
+    const cred = await auth.signInWithEmailAndPassword(email, password);
+    const doc = await db.collection('users').doc(cred.user.uid).get();
+    const role = doc.exists ? (doc.data().role||'customer') : 'customer';
+    if(role !== 'admin'){
+      await auth.signOut();
+      errBox.textContent = 'This account does not have admin access.';
+      errBox.style.display='block';
+      return;
+    }
+    showToast('Admin access granted.');
+    showPage('admin-dashboard');
+  }catch(err){
+    errBox.textContent = friendlyAuthError(err);
+    errBox.style.display='block';
+  }
+}
+
+// ══ ADMIN ══
+function showAdminPage(name){
+  ['dashboard','cars','bookings','users'].forEach(p=>{
+    document.getElementById('admin-page-'+p).style.display = (p===name.replace('admin-','')) ? 'block':'none';
+  });
+  document.querySelectorAll('.admin-side a[data-adm]').forEach(a=>a.classList.toggle('active', a.dataset.adm===name));
+  if(name==='admin-cars') renderAdminCars();
+}
+function renderAdminCars(){
+  document.getElementById('admin-cars-body').innerHTML = adminCars.map(c=>`
+    <tr>
+      <td><div class="d-flex align-items-center gap-2"><span style="font-size:1.4rem">${c.icon}</span>${c.name}</div></td>
+      <td>${c.type}</td>
+      <td>${c.brand}</td>
+      <td>$${c.price}/day</td>
+      <td>${availBadge(c.avail)}</td>
+      <td>
+        <button class="btn-outline-drift" style="padding:.3rem .7rem;font-size:.74rem" onclick="openCarModal(${c.id})"><i class="bi bi-pencil"></i></button>
+        <button class="btn-outline-drift" style="padding:.3rem .7rem;font-size:.74rem;color:var(--red);border-color:var(--red)" onclick="deleteCar(${c.id})"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+function openCarModal(id){
+  const modal = new bootstrap.Modal(document.getElementById('carModal'));
+  if(id){
+    const c = adminCars.find(x=>x.id===id);
+    document.getElementById('carModalTitle').textContent = 'Edit Car';
+    document.getElementById('cm-id').value = c.id;
+    document.getElementById('cm-name').value = c.name;
+    document.getElementById('cm-brand').value = c.brand;
+    document.getElementById('cm-type').value = c.type;
+    document.getElementById('cm-price').value = c.price;
+    document.getElementById('cm-seats').value = c.seats;
+    document.getElementById('cm-trans').value = c.trans;
+    document.getElementById('cm-avail').value = c.avail;
+  } else {
+    document.getElementById('carModalTitle').textContent = 'Add New Car';
+    ['cm-id','cm-name','cm-brand','cm-price','cm-seats'].forEach(id=>document.getElementById(id).value='');
+  }
+  modal.show();
+}
+async function saveCar(){
+  const id = document.getElementById('cm-id').value;
+  const name = document.getElementById('cm-name').value.trim();
+  if(!name){ showToast('Car name is required.'); return; }
+  const data = {
+    name,
+    brand: document.getElementById('cm-brand').value.trim() || 'Generic',
+    type: document.getElementById('cm-type').value,
+    price: parseInt(document.getElementById('cm-price').value) || 50,
+    seats: parseInt(document.getElementById('cm-seats').value) || 5,
+    trans: document.getElementById('cm-trans').value,
+    avail: document.getElementById('cm-avail').value,
+    mpg:'30 mpg', icon:'🚗', color:'#1F2D3D'
+  };
+  try{
+    if(id){
+      data.id = +id;
+      await db.collection('cars').doc(id).set(data, {merge:true});
+      showToast('Car updated successfully.');
+    } else {
+      data.id = Math.max(...adminCars.map(c=>c.id), 0)+1;
+      await db.collection('cars').doc(String(data.id)).set(data);
+      showToast('New car added to fleet.');
+    }
+    bootstrap.Modal.getInstance(document.getElementById('carModal')).hide();
+    // renderAdminCars() runs automatically via the live Firestore listener
+  }catch(err){
+    showToast('Could not save car: ' + (err.message||'please try again.'));
+  }
+}
+async function deleteCar(id){
+  if(!confirm('Remove this car from the fleet?')) return;
+  try{
+    await db.collection('cars').doc(String(id)).delete();
+    showToast('Car removed from fleet.');
+  }catch(err){
+    showToast('Could not remove car: ' + (err.message||'please try again.'));
+  }
+}
+
+// ══ UTILS ══
+function formatDate(d){ return new Date(d+'T12:00').toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'long',day:'numeric'}); }
+function formatCard(el){ el.value = el.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim(); }
+function formatExpiry(el){ el.value = el.value.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1 / $2'); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.style.display='flex'; t.style.alignItems='center';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>{ t.style.display='none'; }, 3200);
+}
+
+// ══ INIT ══
+window.onload = async () => {
+  renderFeatured();
+  renderAdminCars();
+  const today = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+  const hp = document.getElementById('hero-pickup'), hr = document.getElementById('hero-return');
+  if(hp){ const t=new Date(today); t.setDate(t.getDate()+1); hp.value=fmt(t); }
+  if(hr){ const t=new Date(today); t.setDate(t.getDate()+4); hr.value=fmt(t); }
+
+  try{
+    await seedCarsIfEmpty();
+    listenToCars();
+  }catch(err){
+    console.error('Firebase not configured yet, or Firestore rules blocked access:', err);
+    showToast('Backend not connected — check your Firebase config.');
+  }
+};
+</script>
+</body>
+</html>
