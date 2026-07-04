@@ -465,7 +465,7 @@ a{text-decoration:none;}
         </div>
         <div class="d-flex justify-content-between align-items-center mb-3" style="font-size:.83rem">
           <label class="d-flex align-items-center gap-2"><input type="checkbox"> Remember me</label>
-          <a href="#" style="color:var(--signal-deep);font-weight:600">Forgot password?</a>
+          <a href="#" onclick="handleForgotPassword(); return false;" style="color:var(--signal-deep);font-weight:600">Forgot password?</a>
         </div>
         <button class="btn-signal w-100" onclick="handleLogin()" id="login-btn">Sign In</button>
       </div>
@@ -1666,6 +1666,23 @@ async function handleLogin(){
     document.getElementById('login-password').classList.add('is-invalid-drift');
   }finally{
     btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+async function handleForgotPassword(){
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const prefill = document.getElementById('login-email').value.trim();
+  const email = prompt('Enter your account email address. We\'ll send you a link to reset your password.', prefill);
+  if(email === null) return; // user pressed Cancel
+  const trimmed = email.trim();
+  if(!emailRegex.test(trimmed)){
+    showToast('Please enter a valid email address.');
+    return;
+  }
+  try{
+    await auth.sendPasswordResetEmail(trimmed);
+    showToast('Password reset email sent. Please check your inbox (and spam folder).');
+  }catch(err){
+    showToast(friendlyAuthError(err));
   }
 }
 function friendlyAuthError(err){
