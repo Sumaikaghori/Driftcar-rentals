@@ -697,16 +697,17 @@ a{text-decoration:none;}
           <div class="text-muted" style="font-size:.82rem" id="profile-email">—</div>
           <hr>
           <div class="profile-nav text-start">
-            <a class="active"><i class="bi bi-person"></i>Personal Info</a>
+            <a class="active" data-ptab="personal" onclick="showProfileTab('personal')"><i class="bi bi-person"></i>Personal Info</a>
             <a onclick="showPage('history')"><i class="bi bi-clock-history"></i>Booking History</a>
-            <a><i class="bi bi-credit-card"></i>Payment Methods</a>
-            <a><i class="bi bi-bell"></i>Notifications</a>
+            <a data-ptab="payment" onclick="showProfileTab('payment')"><i class="bi bi-credit-card"></i>Payment Methods</a>
+            <a data-ptab="notifications" onclick="showProfileTab('notifications')"><i class="bi bi-bell"></i>Notifications</a>
             <a onclick="handleSignOut()" style="color:var(--red)"><i class="bi bi-box-arrow-right"></i>Sign Out</a>
           </div>
         </div>
       </div>
       <div class="col-lg-9">
-        <div class="form-card">
+        <!-- Personal Info panel -->
+        <div class="form-card profile-panel" id="profile-panel-personal">
           <h5 class="fw-bold mb-3" style="font-family:var(--font-display)">Personal information</h5>
           <div class="row g-3">
             <div class="col-md-6"><label class="form-label-drift">First Name</label><input type="text" class="form-control-drift" id="pf-fname"></div>
@@ -717,6 +718,55 @@ a{text-decoration:none;}
             <div class="col-md-6"><label class="form-label-drift">Date of Birth</label><input type="date" class="form-control-drift" id="pf-dob"></div>
           </div>
           <button class="btn-signal mt-4" onclick="saveProfile()" id="save-profile-btn">Save Changes</button>
+        </div>
+
+        <!-- Payment Methods panel -->
+        <div class="form-card profile-panel" id="profile-panel-payment" style="display:none">
+          <h5 class="fw-bold mb-3" style="font-family:var(--font-display)">Payment methods</h5>
+          <div id="payment-methods-list" class="mb-4"></div>
+          <hr>
+          <h6 class="fw-bold mb-3 mt-4" style="font-family:var(--font-display);font-size:.92rem">Add a new card</h6>
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label-drift">Cardholder Name</label><input type="text" class="form-control-drift" id="pm-name" placeholder="Name on card"></div>
+            <div class="col-md-6"><label class="form-label-drift">Card Number</label><input type="text" class="form-control-drift" id="pm-number" placeholder="0000 0000 0000 0000" maxlength="19" oninput="formatCard(this)"></div>
+            <div class="col-md-3"><label class="form-label-drift">Expiry</label><input type="text" class="form-control-drift" id="pm-expiry" placeholder="MM / YY" maxlength="7" oninput="formatExpiry(this)"></div>
+            <div class="col-md-3"><label class="form-label-drift">CVV</label><input type="text" class="form-control-drift" id="pm-cvv" placeholder="•••" maxlength="4"></div>
+          </div>
+          <button class="btn-signal mt-4" onclick="addPaymentMethod()" id="add-card-btn">Add Card</button>
+        </div>
+
+        <!-- Notifications panel -->
+        <div class="form-card profile-panel" id="profile-panel-notifications" style="display:none">
+          <h5 class="fw-bold mb-3" style="font-family:var(--font-display)">Notification preferences</h5>
+          <div class="d-flex align-items-center justify-content-between py-3" style="border-bottom:1px solid #EEF0F2">
+            <div>
+              <div class="fw-bold" style="font-size:.9rem">Booking confirmations</div>
+              <div class="text-muted" style="font-size:.8rem">Email me when a booking is confirmed or updated.</div>
+            </div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="notif-booking" style="width:2.6em;height:1.4em;cursor:pointer"></div>
+          </div>
+          <div class="d-flex align-items-center justify-content-between py-3" style="border-bottom:1px solid #EEF0F2">
+            <div>
+              <div class="fw-bold" style="font-size:.9rem">Trip reminders</div>
+              <div class="text-muted" style="font-size:.8rem">Get reminded before pickup and return times.</div>
+            </div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="notif-reminders" style="width:2.6em;height:1.4em;cursor:pointer"></div>
+          </div>
+          <div class="d-flex align-items-center justify-content-between py-3" style="border-bottom:1px solid #EEF0F2">
+            <div>
+              <div class="fw-bold" style="font-size:.9rem">SMS alerts</div>
+              <div class="text-muted" style="font-size:.8rem">Receive text messages for urgent booking updates.</div>
+            </div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="notif-sms" style="width:2.6em;height:1.4em;cursor:pointer"></div>
+          </div>
+          <div class="d-flex align-items-center justify-content-between py-3">
+            <div>
+              <div class="fw-bold" style="font-size:.9rem">Offers &amp; promotions</div>
+              <div class="text-muted" style="font-size:.8rem">Occasional discounts, deals, and DRIFT news.</div>
+            </div>
+            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="notif-promo" style="width:2.6em;height:1.4em;cursor:pointer"></div>
+          </div>
+          <button class="btn-signal mt-4" onclick="saveNotificationPrefs()" id="save-notif-btn">Save Preferences</button>
         </div>
       </div>
     </div>
@@ -1083,7 +1133,7 @@ function showPage(name){
     listenToAllUsersForAdmin();
   }
   if(name==='booking') updateSummary();
-  if(name==='profile') renderProfile();
+  if(name==='profile'){ showProfileTab('personal'); renderProfile(); }
 }
 function toggleMobileNav(){ document.getElementById('mobile-nav').classList.toggle('d-none'); }
 function requireAuth(name){
@@ -1400,8 +1450,144 @@ async function renderProfile(){
     document.getElementById('pf-phone').value = d.phone || '';
     document.getElementById('pf-license').value = d.license || '';
     document.getElementById('pf-dob').value = d.dob || '';
+
+    // payment methods
+    currentUser.paymentMethods = d.paymentMethods || [];
+    renderPaymentMethods();
+
+    // notification preferences
+    const n = d.notifications || {};
+    document.getElementById('notif-booking').checked = n.booking !== false;   // default on
+    document.getElementById('notif-reminders').checked = n.reminders !== false; // default on
+    document.getElementById('notif-sms').checked = !!n.sms;                     // default off
+    document.getElementById('notif-promo').checked = !!n.promo;                 // default off
   }catch(err){
     console.error('Could not load profile:', err);
+  }
+}
+
+// ══ PROFILE TABS ══
+function showProfileTab(tab){
+  ['personal','payment','notifications'].forEach(t=>{
+    document.getElementById('profile-panel-'+t).style.display = (t===tab) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.profile-nav a[data-ptab]').forEach(a=>{
+    a.classList.toggle('active', a.dataset.ptab===tab);
+  });
+}
+
+// ══ PAYMENT METHODS ══
+function maskCardNumber(num){
+  const digits = (num||'').replace(/\D/g,'');
+  return digits.length>=4 ? '•••• •••• •••• '+digits.slice(-4) : num;
+}
+function cardBrandIcon(num){
+  const d = (num||'').replace(/\D/g,'');
+  if(d.startsWith('4')) return 'bi-credit-card-2-front';
+  if(d.startsWith('5')) return 'bi-credit-card-2-back';
+  return 'bi-credit-card';
+}
+function renderPaymentMethods(){
+  const list = currentUser.paymentMethods || [];
+  const el = document.getElementById('payment-methods-list');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML = '<p class="text-muted mb-0" style="font-size:.88rem">No saved cards yet. Add one below.</p>';
+    return;
+  }
+  el.innerHTML = list.map((c,i)=>`
+    <div class="d-flex align-items-center justify-content-between py-3" style="border-bottom:1px solid #EEF0F2">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi ${cardBrandIcon(c.number)} fs-4" style="color:var(--signal-deep)"></i>
+        <div>
+          <div class="fw-bold" style="font-size:.9rem">${maskCardNumber(c.number)} ${c.isDefault ? '<span class="badge-avail" style="background:var(--green-bg);color:var(--green);font-size:.65rem;padding:.15rem .5rem;border-radius:20px;margin-left:.4rem">DEFAULT</span>' : ''}</div>
+          <div class="text-muted" style="font-size:.8rem">${c.name || ''} · Expires ${c.expiry || '--/--'}</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        ${!c.isDefault ? `<button class="btn-outline-drift" style="padding:.3rem .7rem;font-size:.74rem" onclick="setDefaultPaymentMethod(${i})">Set Default</button>` : ''}
+        <button class="btn-outline-drift" style="padding:.3rem .7rem;font-size:.74rem;color:var(--red);border-color:var(--red)" onclick="deletePaymentMethod(${i})"><i class="bi bi-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+async function addPaymentMethod(){
+  if(!currentUser) return;
+  const name = document.getElementById('pm-name').value.trim();
+  const number = document.getElementById('pm-number').value.trim();
+  const expiry = document.getElementById('pm-expiry').value.trim();
+  const cvv = document.getElementById('pm-cvv').value.trim();
+  const digits = number.replace(/\D/g,'');
+  if(!name){ showToast('Cardholder name is required.'); return; }
+  if(digits.length < 12){ showToast('Enter a valid card number.'); return; }
+  if(!/^\d{2}\s?\/\s?\d{2}$/.test(expiry)){ showToast('Enter expiry as MM / YY.'); return; }
+  if(cvv.length < 3){ showToast('Enter a valid CVV.'); return; }
+
+  const btn = document.getElementById('add-card-btn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try{
+    const list = currentUser.paymentMethods || [];
+    list.push({ name, number: digits, expiry, isDefault: list.length===0 });
+    await db.collection('users').doc(currentUser.uid).set({ paymentMethods: list }, {merge:true});
+    currentUser.paymentMethods = list;
+    renderPaymentMethods();
+    document.getElementById('pm-name').value = '';
+    document.getElementById('pm-number').value = '';
+    document.getElementById('pm-expiry').value = '';
+    document.getElementById('pm-cvv').value = '';
+    showToast('Card added successfully.');
+  }catch(err){
+    showToast('Could not add card: ' + (err.message||'please try again.'));
+  }finally{
+    btn.disabled = false; btn.textContent = 'Add Card';
+  }
+}
+async function deletePaymentMethod(idx){
+  if(!currentUser) return;
+  if(!confirm('Remove this card?')) return;
+  try{
+    const list = (currentUser.paymentMethods || []).slice();
+    const wasDefault = list[idx] && list[idx].isDefault;
+    list.splice(idx,1);
+    if(wasDefault && list.length) list[0].isDefault = true;
+    await db.collection('users').doc(currentUser.uid).set({ paymentMethods: list }, {merge:true});
+    currentUser.paymentMethods = list;
+    renderPaymentMethods();
+    showToast('Card removed.');
+  }catch(err){
+    showToast('Could not remove card: ' + (err.message||'please try again.'));
+  }
+}
+async function setDefaultPaymentMethod(idx){
+  if(!currentUser) return;
+  try{
+    const list = (currentUser.paymentMethods || []).map((c,i)=>({...c, isDefault: i===idx}));
+    await db.collection('users').doc(currentUser.uid).set({ paymentMethods: list }, {merge:true});
+    currentUser.paymentMethods = list;
+    renderPaymentMethods();
+    showToast('Default card updated.');
+  }catch(err){
+    showToast('Could not update default card: ' + (err.message||'please try again.'));
+  }
+}
+
+// ══ NOTIFICATIONS ══
+async function saveNotificationPrefs(){
+  if(!currentUser) return;
+  const btn = document.getElementById('save-notif-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const notifications = {
+      booking: document.getElementById('notif-booking').checked,
+      reminders: document.getElementById('notif-reminders').checked,
+      sms: document.getElementById('notif-sms').checked,
+      promo: document.getElementById('notif-promo').checked
+    };
+    await db.collection('users').doc(currentUser.uid).set({ notifications }, {merge:true});
+    showToast('Notification preferences saved.');
+  }catch(err){
+    showToast('Could not save preferences: ' + (err.message||'please try again.'));
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save Preferences';
   }
 }
 async function saveProfile(){
